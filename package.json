@@ -1,0 +1,37 @@
+{
+  "name": "writings",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test:perf": "node tests/animation-perf.mjs",
+    "test:screenshots": "npx playwright test tests/animation-screenshots.spec.mjs",
+    "test:screenshots:update": "npx playwright test tests/animation-screenshots.spec.mjs --update-snapshots",
+    "test:responsive": "npx playwright test tests/responsive-screenshots.spec.mjs",
+    "test:responsive:update": "npx playwright test tests/responsive-screenshots.spec.mjs --update-snapshots",
+    "test:all": "npx playwright test",
+    "deploy": "astro build && wrangler pages deploy dist --project-name=writings",
+    "deploy:preview": "astro build && wrangler pages deploy dist --project-name=writings --branch=preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.2.0",
+    "@astrojs/rss": "^4.0.0",
+    "@astrojs/sitemap": "^3.3.0",
+    "@excalidraw/mermaid-to-excalidraw": "^2.1.1",
+    "@excalidraw/utils": "^0.1.3-test32",
+    "astro": "^5.7.0",
+    "excalidraw-to-svg": "^3.1.0",
+    "glob": "^13.0.6",
+    "mermaid": "^11.13.0",
+    "playwright": "^1.58.2",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "wrangler": "^4.73.0"
+  }
+}

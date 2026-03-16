@@ -1,0 +1,148 @@
+---
+---
+
+<div id="f1-timeline" class="f1tl" aria-hidden="true" data-reader-ignore>
+  <span class="f1tl-label"></span>
+  <span class="f1tl-value"></span>
+</div>
+
+<style is:global>
+  .f1tl {
+    position: absolute;
+    display: none;
+    align-items: baseline;
+    gap: 0.3rem;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  @media (min-width: 1280px) {
+    .f1tl { display: flex; }
+  }
+
+  .f1tl-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+  }
+
+  .f1tl-value {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text);
+    transition: opacity 0.25s ease;
+    min-width: 3ch;
+  }
+
+  .f1tl-value.changing {
+    opacity: 0;
+  }
+</style>
+
+<script>
+  function initF1() {
+    const root = document.getElementById("f1-timeline") as HTMLElement;
+    if (!root) return;
+    const valueEl = root.querySelector<HTMLElement>(".f1tl-value")!;
+
+    const spans = document.querySelectorAll<HTMLElement>("[data-phase][data-f1]");
+    if (!spans.length) return;
+
+    const phases = Array.from(spans).map(s => ({
+      f1: s.dataset.f1!,
+      el: s,
+    }));
+
+    // Populate labels via JS so reader mode doesn't see them
+    root.querySelector(".f1tl-label")!.textContent = "F1 =";
+    valueEl.textContent = "0.000";
+
+    // Boundaries
+    const startAnchor = phases[0].el;  // "Start" span at research loop
+    const lastPhase = phases[phases.length - 1].el;
+
+    // Find "What Claude is good at" as end boundary
+    const allH2 = document.querySelectorAll("h2");
+    let endAnchor: Element | null = null;
+    for (const h2 of allH2) {
+      if (h2.textContent?.includes("What Claude") || h2.textContent?.includes("Everything we tried")) {
+        endAnchor = h2;
+        break;
+      }
+    }
+
+    let currentF1 = "";
+    const rightX = `max(1.5rem, calc((100vw - 980px) / 2 - 160px))`;
+
+    function update() {
+      const viewMid = window.innerHeight / 2;
+      const scrollY = window.scrollY;
+
+      // Absolute positions of anchors
+      const startY = startAnchor.getBoundingClientRect().top + scrollY;
+      const endY = endAnchor
+        ? endAnchor.getBoundingClientRect().top + scrollY
+        : lastPhase.getBoundingClientRect().top + scrollY + 200;
+
+      // Three zones:
+      // 1. Before: element sits at startAnchor position (scrolls with page)
+      // 2. Middle: element is fixed at viewport center
+      // 3. After: element sits at endAnchor position (scrolls with page)
+
+      const fixStart = startY - viewMid;  // scrollY where we start fixing
+      const fixEnd = endY - viewMid;      // scrollY where we stop fixing
+
+      if (scrollY < fixStart) {
+        // Before: position at start anchor
+        root.style.position = "absolute";
+        root.style.top = `${startY}px`;
+        root.style.right = rightX;
+      } else if (scrollY > fixEnd) {
+        // After: position at end anchor
+        root.style.position = "absolute";
+        root.style.top = `${endY}px`;
+        root.style.right = rightX;
+      } else {
+        // Middle: fixed at center
+        root.style.position = "fixed";
+        root.style.top = `${viewMid}px`;
+        root.style.right = rightX;
+      }
+
+      // Update F1 value — trigger slightly before heading reaches center
+      const threshold = window.innerHeight * 0.55;
+      let reached = -1;
+      for (let i = 0; i < phases.length; i++) {
+        if (phases[i].el.getBoundingClientRect().top < threshold) reached = i;
+      }
+
+      let display = "0.000";
+      if (reached >= 0) {
+        const raw = phases[reached].f1;
+        const parts = raw.split("→");
+        display = parts[parts.length - 1].trim();
+      }
+
+      if (display !== currentF1) {
+        valueEl.classList.add("changing");
+        setTimeout(() => {
+          valueEl.textContent = display;
+          currentF1 = display;
+          valueEl.classList.remove("changing");
+        }, 200);
+      }
+    }
+
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
+    update();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initF1);
+  } else {
+    initF1();
+  }
+  document.addEventListener("astro:page-load", initF1);
+</script>

@@ -1,0 +1,110 @@
+---
+import Nav from "./Nav.astro";
+import Footer from "./Footer.astro";
+import "../styles/global.css";
+import "katex/dist/katex.min.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  ogType?: "website" | "article";
+  ogImage?: string;
+}
+
+const {
+  title,
+  description = "A quiet place to read.",
+  ogType = "website",
+  ogImage,
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL.href} />
+
+    <meta property="og:type" content={ogType} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL.href} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+
+    <meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImage && <meta name="twitter:image" content={ogImage} />}
+
+    <slot name="head" />
+
+    <link rel="alternate" type="application/rss+xml" title="Blog" href="/rss.xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div class="page">
+      <Nav />
+      <main>
+        <slot />
+      </main>
+      <Footer />
+    </div>
+    <script>
+      import mermaid from "mermaid";
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "neutral",
+        themeVariables: { background: "transparent" },
+      });
+
+      // Support per-diagram options via data attributes:
+      //   ```mermaid theme=dark
+      //   ```mermaid bg=#f0f0f0
+      document.querySelectorAll<HTMLPreElement>("pre.mermaid").forEach(async (el, i) => {
+        const config: Record<string, any> = {};
+        const theme = el.dataset.theme;
+        const bg = el.dataset.bg;
+        if (theme) config.theme = theme;
+
+        const { svg } = await mermaid.render(`mermaid-${i}`, el.textContent?.trim() ?? "", el);
+        el.innerHTML = svg;
+        const svgEl = el.querySelector("svg");
+        if (svgEl) {
+          svgEl.style.background = bg ?? "transparent";
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<style>
+  .page {
+    max-width: var(--width-page);
+    margin: 0 auto;
+    padding: 0 1rem;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (min-width: 640px) {
+    .page {
+      padding: 0 var(--space-lg);
+    }
+  }
+
+  main {
+    flex: 1;
+  }
+</style>

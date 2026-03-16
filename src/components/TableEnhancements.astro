@@ -1,0 +1,148 @@
+<style>
+  :global(table th[data-sortable]) {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.15s ease;
+  }
+
+  :global(table th[data-sortable]:hover) {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  :global(.sort-indicator) {
+    display: inline-block;
+    margin-left: 0.3em;
+    font-size: 0.7em;
+    opacity: 0.6;
+    vertical-align: middle;
+  }
+</style>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // --- 1. Color-coded delta values ---
+    const deltaPattern = /^(\*{0,2})([+\-\u2212])(\d+\.\d+)(\*{0,2})$|^(\u22480)$/;
+
+    function colorCell(cell: HTMLTableCellElement) {
+      const text = cell.textContent?.trim() ?? "";
+
+      // Check inside <strong> tags first
+      const strong = cell.querySelector("strong");
+      const target = strong ?? cell;
+      const value = target.textContent?.trim() ?? "";
+
+      if (!value) return;
+
+      let color: string | null = null;
+
+      if (/^\u22480$/.test(value)) {
+        color = "var(--color-text-tertiary)";
+      } else if (/^[+]/.test(value)) {
+        color = "#16a34a";
+      } else if (/^[\-\u2212]/.test(value)) {
+        color = "#dc2626";
+      }
+
+      if (color) {
+        (target as HTMLElement).style.color = color;
+      }
+    }
+
+    document.querySelectorAll<HTMLTableCellElement>("table td").forEach(colorCell);
+
+    // --- 2. Sortable tables ---
+    document.querySelectorAll("table").forEach((table) => {
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      if (!thead || !tbody) return;
+
+      const headers = thead.querySelectorAll("th");
+      if (headers.length === 0) return;
+
+      let currentSortCol = -1;
+      let ascending = true;
+
+      headers.forEach((th, colIndex) => {
+        th.setAttribute("data-sortable", "");
+
+        th.addEventListener("click", () => {
+          if (currentSortCol === colIndex) {
+            ascending = !ascending;
+          } else {
+            currentSortCol = colIndex;
+            ascending = true;
+          }
+
+          // Update sort indicators
+          headers.forEach((h) => {
+            const existing = h.querySelector(".sort-indicator");
+            if (existing) existing.remove();
+          });
+
+          const indicator = document.createElement("span");
+          indicator.className = "sort-indicator";
+          indicator.textContent = ascending ? "\u25B2" : "\u25BC";
+          th.appendChild(indicator);
+
+          // Sort rows
+          const rows = Array.from(tbody.querySelectorAll("tr"));
+
+          rows.sort((a, b) => {
+            const cellA = a.children[colIndex]?.textContent?.trim() ?? "";
+            const cellB = b.children[colIndex]?.textContent?.trim() ?? "";
+
+            const numA = parseNumeric(cellA);
+            const numB = parseNumeric(cellB);
+
+            let result: number;
+            if (numA !== null && numB !== null) {
+              result = numA - numB;
+            } else {
+              result = cellA.localeCompare(cellB, undefined, {
+                numeric: true,
+                sensitivity: "base",
+              });
+            }
+
+            return ascending ? result : -result;
+          });
+
+          rows.forEach((row) => tbody.appendChild(row));
+        });
+      });
+    });
+
+    function parseNumeric(value: string): number | null {
+      if (!value) return null;
+
+      // Handle approximate zero
+      if (/^\u22480$/.test(value)) return 0;
+
+      // Strip bold markers
+      let cleaned = value.replace(/\*{1,2}/g, "");
+
+      // Replace unicode minus with hyphen-minus
+      cleaned = cleaned.replace(/\u2212/g, "-");
+
+      // Strip leading + for parsing
+      if (cleaned.startsWith("+")) {
+        cleaned = cleaned.substring(1);
+      }
+
+      // Try parsing percentage
+      if (cleaned.endsWith("%")) {
+        const num = parseFloat(cleaned.slice(0, -1));
+        return isNaN(num) ? null : num;
+      }
+
+      // Try date (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
+        return new Date(cleaned).getTime();
+      }
+
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? null : num;
+    }
+  });
+</script>

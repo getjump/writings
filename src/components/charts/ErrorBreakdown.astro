@@ -1,0 +1,342 @@
+---
+const errors = [
+  { from: "works_oob", to: "tinkering", count: 4748, pct: 40 },
+  { from: "tinkering", to: "works_oob", count: 4321, pct: 36 },
+  { from: "borked", to: "tinkering", count: 1499, pct: 12 },
+  { from: "tinkering", to: "borked", count: 879, pct: 7 },
+  { from: "borked", to: "works_oob", count: 328, pct: 3 },
+  { from: "works_oob", to: "borked", count: 219, pct: 2 },
+];
+const totalErrors = 11994;
+
+const svgW = 650;
+const svgH = 300;
+const marginTop = 50;
+const marginBottom = 30;
+const marginLeft = 200;
+const marginRight = 70;
+const plotW = svgW - marginLeft - marginRight;
+const plotH = svgH - marginTop - marginBottom;
+
+const barCount = errors.length;
+const barGroupH = plotH / barCount;
+const barH = barGroupH * 0.6;
+const barGap = (barGroupH - barH) / 2;
+
+const maxCount = errors[0].count;
+
+function isBorked(from: string, to: string) {
+  return from === "borked" || to === "borked";
+}
+
+function barColor(from: string, to: string) {
+  return isBorked(from, to) ? "#e57373" : "#e8a838";
+}
+
+function formatLabel(s: string) {
+  return s.replace(/_/g, "_");
+}
+---
+
+<div class="error-breakdown-wrapper" id="error-breakdown-chart">
+  <svg
+    viewBox={`0 0 ${svgW} ${svgH}`}
+    xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="Error Type Breakdown horizontal bar chart"
+    style="width:100%;height:auto;display:block;"
+  >
+    <!-- Title -->
+    <text
+      x={svgW / 2}
+      y="22"
+      text-anchor="middle"
+      class="eb-chart-title"
+    >Error Type Breakdown</text>
+
+    <!-- Subtitle -->
+    <text
+      x={svgW / 2}
+      y="40"
+      text-anchor="middle"
+      class="eb-chart-subtitle"
+    >76% of errors are tinkering ↔ works_oob</text>
+
+    <!-- Bars and labels -->
+    {errors.map((e, i) => {
+      const y = marginTop + i * barGroupH + barGap;
+      const fullBarW = (e.count / maxCount) * plotW;
+      const fill = barColor(e.from, e.to);
+      const label = `${formatLabel(e.from)} → ${formatLabel(e.to)}`;
+      const severity = isBorked(e.from, e.to) ? "significant error" : "boundary confusion";
+
+      return (
+        <g class="eb-bar-group" data-index={i}>
+          {/* Label on the left */}
+          <text
+            x={marginLeft - 10}
+            y={y + barH / 2 + 4}
+            text-anchor="end"
+            class="eb-bar-label"
+            data-index={i}
+          >{label}</text>
+
+          {/* Bar rect — starts at 0 width, animated via JS */}
+          <rect
+            class="eb-bar-rect"
+            x={marginLeft}
+            y={y}
+            width={0}
+            height={barH}
+            fill={fill}
+            rx="3"
+            data-target-w={fullBarW}
+            data-index={i}
+            data-from={e.from}
+            data-to={e.to}
+            data-count={e.count}
+            data-pct={e.pct}
+            data-severity={severity}
+            data-label={label}
+          />
+
+          {/* Percentage label at end of bar — hidden until animated */}
+          <text
+            class="eb-pct-label"
+            x={marginLeft + fullBarW + 6}
+            y={y + barH / 2 + 4}
+            text-anchor="start"
+            opacity="0"
+            data-index={i}
+          >{e.pct}%</text>
+        </g>
+      );
+    })}
+  </svg>
+
+  <!-- Tooltip -->
+  <div class="eb-tooltip" id="eb-tooltip" style="display:none;">
+    <div class="eb-tooltip-title" id="eb-tt-title"></div>
+    <div class="eb-tooltip-count" id="eb-tt-count"></div>
+    <div class="eb-tooltip-severity" id="eb-tt-severity"></div>
+  </div>
+</div>
+
+<style>
+  .error-breakdown-wrapper {
+    position: relative;
+    max-width: 100%;
+    margin: 1.5rem auto;
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--color-surface, #fff);
+    overflow: visible;
+  }
+
+  .eb-chart-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 16px;
+    font-weight: 600;
+    fill: var(--color-text, #1a1a1a);
+  }
+
+  .eb-chart-subtitle {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 11px;
+    fill: var(--color-text-tertiary, #888);
+  }
+
+  .eb-bar-label {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 11.5px;
+    fill: var(--color-text-secondary, #555);
+    cursor: pointer;
+  }
+
+  .eb-bar-rect {
+    cursor: pointer;
+    transition: filter 0.15s ease;
+  }
+
+  .eb-bar-rect:hover,
+  .eb-bar-rect.highlight {
+    filter: brightness(1.15);
+  }
+
+  .eb-pct-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--color-text, #1a1a1a);
+    transition: opacity 0.3s ease;
+  }
+
+  .eb-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    font-size: 12px;
+    color: var(--color-text, #1a1a1a);
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .eb-tooltip-title {
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .eb-tooltip-count {
+    font-family: var(--font-mono, monospace);
+    color: var(--color-text-secondary, #555);
+  }
+
+  .eb-tooltip-severity {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--color-text-tertiary, #888);
+    margin-top: 2px;
+  }
+</style>
+
+<script>
+  function initErrorBreakdown() {
+    const wrapper = document.getElementById("error-breakdown-chart");
+    if (!wrapper) return;
+
+    const bars = wrapper.querySelectorAll<SVGRectElement>(".eb-bar-rect");
+    const pctLabels = wrapper.querySelectorAll<SVGTextElement>(".eb-pct-label");
+    const barLabels = wrapper.querySelectorAll<SVGTextElement>(".eb-bar-label");
+    const tooltip = document.getElementById("eb-tooltip");
+    const ttTitle = document.getElementById("eb-tt-title");
+    const ttCount = document.getElementById("eb-tt-count");
+    const ttSeverity = document.getElementById("eb-tt-severity");
+
+    let animated = false;
+
+    function animateBars() {
+      if (animated) return;
+      animated = true;
+
+      bars.forEach((bar, i) => {
+        const targetW = parseFloat(bar.getAttribute("data-target-w") || "0");
+
+        bar.style.transition = "none";
+        bar.setAttribute("width", "0");
+        bar.getBoundingClientRect(); // force reflow
+
+        setTimeout(() => {
+          bar.style.transition = "width 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+          bar.setAttribute("width", String(targetW));
+        }, i * 80);
+
+        // Show percentage label after bar animation
+        setTimeout(() => {
+          const idx = bar.getAttribute("data-index") || "0";
+          pctLabels.forEach((lbl) => {
+            if (lbl.getAttribute("data-index") === idx) {
+              lbl.setAttribute("opacity", "1");
+            }
+          });
+        }, i * 80 + 500);
+      });
+    }
+
+    // IntersectionObserver to trigger animation
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateBars();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(wrapper);
+
+    function showTooltip(bar: SVGRectElement, e: MouseEvent) {
+      if (!tooltip || !ttTitle || !ttCount || !ttSeverity) return;
+
+      const label = bar.getAttribute("data-label") || "";
+      const count = bar.getAttribute("data-count") || "";
+      const pct = bar.getAttribute("data-pct") || "";
+      const severity = bar.getAttribute("data-severity") || "";
+
+      ttTitle.textContent = label;
+      ttCount.textContent = `${parseInt(count).toLocaleString()} errors (${pct}% of all errors)`;
+      ttSeverity.textContent = `This is a ${severity} misclassification`;
+
+      tooltip.style.display = "block";
+      positionTooltip(e);
+    }
+
+    function positionTooltip(e: MouseEvent) {
+      if (!tooltip || !wrapper) return;
+      const rect = wrapper.getBoundingClientRect();
+      const x = e.clientX - rect.left + 12;
+      const y = e.clientY - rect.top - 10;
+
+      const tipRect = tooltip.getBoundingClientRect();
+      const maxX = rect.width - tipRect.width - 8;
+
+      tooltip.style.left = `${Math.min(x, maxX)}px`;
+      tooltip.style.top = `${Math.max(0, y - tipRect.height)}px`;
+    }
+
+    function hideTooltip() {
+      if (!tooltip) return;
+      tooltip.style.display = "none";
+    }
+
+    // Bar hover events
+    bars.forEach((bar) => {
+      bar.addEventListener("mouseenter", (e: MouseEvent) => {
+        showTooltip(bar, e);
+      });
+
+      bar.addEventListener("mousemove", (e: MouseEvent) => {
+        positionTooltip(e);
+      });
+
+      bar.addEventListener("mouseleave", () => {
+        hideTooltip();
+      });
+    });
+
+    // Label hover highlights corresponding bar
+    barLabels.forEach((label) => {
+      const idx = label.getAttribute("data-index");
+
+      label.addEventListener("mouseenter", () => {
+        bars.forEach((bar) => {
+          if (bar.getAttribute("data-index") === idx) {
+            bar.classList.add("highlight");
+          }
+        });
+      });
+
+      label.addEventListener("mouseleave", () => {
+        bars.forEach((bar) => {
+          if (bar.getAttribute("data-index") === idx) {
+            bar.classList.remove("highlight");
+          }
+        });
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initErrorBreakdown);
+  } else {
+    initErrorBreakdown();
+  }
+  document.addEventListener("astro:page-load", initErrorBreakdown);
+</script>

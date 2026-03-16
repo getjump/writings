@@ -1,0 +1,375 @@
+---
+const phases = [
+  { label: "Phase 11\nBaseline", f1: 0.725, phase: "11" },
+  { label: "+IRT\n(Phase 12)", f1: 0.754, phase: "12" },
+  { label: "+Relabel\n(Phase 13)", f1: 0.771, phase: "13" },
+  { label: "+ClassWeight\n(Phase 16)", f1: 0.778, phase: "16" },
+  { label: "+HP Tuning\n(Phase 17)", f1: 0.780, phase: "17" },
+  { label: "Per-game\nvote (21)", f1: 0.871, phase: "21" },
+];
+
+const baseline = 0.725;
+const yMin = 0.700;
+const yMax = 0.900;
+
+const svgW = 700;
+const svgH = 360;
+const marginTop = 40;
+const marginBottom = 60;
+const marginLeft = 55;
+const marginRight = 20;
+const plotW = svgW - marginLeft - marginRight;
+const plotH = svgH - marginTop - marginBottom;
+
+const yTicks = [0.700, 0.725, 0.750, 0.775, 0.800, 0.825, 0.850, 0.875, 0.900];
+
+function yScale(val: number) {
+  return marginTop + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+}
+
+const barCount = phases.length;
+const barGroupW = plotW / barCount;
+const barW = barGroupW * 0.55;
+const barGap = (barGroupW - barW) / 2;
+
+const baselineY = yScale(baseline);
+const yBottom = yScale(yMin);
+---
+
+<div class="cumulative-progress-wrapper" id="cumulative-progress-chart">
+  <svg
+    viewBox={`0 0 ${svgW} ${svgH}`}
+    xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="Cumulative ML Pipeline Progress bar chart"
+    style="width:100%;height:auto;display:block;"
+  >
+    <!-- Title -->
+    <text
+      x={svgW / 2}
+      y="24"
+      text-anchor="middle"
+      class="chart-title"
+    >Cumulative ML Pipeline Progress</text>
+
+    <!-- Y-axis ticks and grid lines -->
+    {yTicks.map((t) => {
+      const y = yScale(t);
+      return (
+        <g>
+          <line x1={marginLeft} y1={y} x2={marginLeft + plotW} y2={y} class="grid-line" />
+          <text x={marginLeft - 8} y={y + 4} text-anchor="end" class="y-tick-label">
+            {t.toFixed(3)}
+          </text>
+        </g>
+      );
+    })}
+
+    <!-- Baseline dashed line -->
+    <line
+      x1={marginLeft}
+      y1={baselineY}
+      x2={marginLeft + plotW}
+      y2={baselineY}
+      class="baseline-line"
+    />
+    <text
+      x={marginLeft + plotW + 2}
+      y={baselineY - 5}
+      class="baseline-label"
+    >Original baseline</text>
+
+    <!-- Bars -->
+    {phases.map((p, i) => {
+      const x = marginLeft + i * barGroupW + barGap;
+      const barH = ((p.f1 - yMin) / (yMax - yMin)) * plotH;
+      const barY = yScale(p.f1);
+      const isLast = i === phases.length - 1;
+      const fill = isLast ? "#4a9e6b" : "#a8a8a6";
+      const lines = p.label.split("\n");
+
+      const delta = i === 0 ? 0 : +(p.f1 - phases[i - 1].f1).toFixed(3);
+
+      return (
+        <g class="bar-group" data-index={i}>
+          {/* Bar rect — starts at bottom, animated via JS */}
+          <rect
+            class="bar-rect"
+            x={x}
+            y={yBottom}
+            width={barW}
+            height={0}
+            fill={fill}
+            rx="3"
+            data-target-y={barY}
+            data-target-h={barH}
+            data-index={i}
+            data-phase={p.phase}
+            data-label={p.label.replace("\n", " ")}
+            data-f1={p.f1}
+            data-delta={delta}
+            data-is-baseline={i === 0 ? "true" : "false"}
+          />
+
+          {/* F1 value above bar — hidden until animated */}
+          <text
+            class="f1-label"
+            x={x + barW / 2}
+            y={barY - 8}
+            text-anchor="middle"
+            opacity="0"
+            data-index={i}
+          >{p.f1.toFixed(3)}</text>
+
+          {/* Delta label between this bar and previous */}
+          {i > 0 && delta > 0 && (
+            <text
+              class="delta-label"
+              x={x + barW / 2}
+              y={barY - 24}
+              text-anchor="middle"
+              opacity="0"
+              data-index={i}
+            >+{delta.toFixed(3)}</text>
+          )}
+
+          {/* X-axis label (two lines) */}
+          <text
+            x={x + barW / 2}
+            y={yBottom + 16}
+            text-anchor="middle"
+            class="x-label"
+          >
+            {lines.map((line, li) => (
+              <tspan x={x + barW / 2} dy={li === 0 ? 0 : 14}>
+                {line}
+              </tspan>
+            ))}
+          </text>
+        </g>
+      );
+    })}
+  </svg>
+
+  <!-- Tooltip -->
+  <div class="chart-tooltip" id="cp-tooltip" style="display:none;">
+    <div class="tooltip-phase" id="cp-tt-phase"></div>
+    <div class="tooltip-f1" id="cp-tt-f1"></div>
+    <div class="tooltip-delta" id="cp-tt-delta"></div>
+  </div>
+</div>
+
+<style>
+  .cumulative-progress-wrapper {
+    position: relative;
+    max-width: 100%;
+    margin: 1.5rem auto;
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--color-surface, #fff);
+    overflow: visible;
+  }
+
+  .chart-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 16px;
+    font-weight: 600;
+    fill: var(--color-text, #1a1a1a);
+  }
+
+  .grid-line {
+    stroke: var(--color-border, #e5e5e3);
+    stroke-width: 0.5;
+  }
+
+  .y-tick-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    fill: var(--color-text-secondary, #555);
+  }
+
+  .baseline-line {
+    stroke: #e57373;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 4;
+  }
+
+  .baseline-label {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 10px;
+    fill: #e57373;
+  }
+
+  .bar-rect {
+    transition: opacity 0.2s ease;
+    cursor: pointer;
+  }
+
+  .bar-rect:hover {
+    opacity: 0.8;
+  }
+
+  .f1-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--color-text, #1a1a1a);
+    transition: opacity 0.3s ease;
+  }
+
+  .delta-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    fill: var(--color-text-tertiary, #888);
+    transition: opacity 0.3s ease;
+  }
+
+  .x-label {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 10.5px;
+    fill: var(--color-text-secondary, #555);
+  }
+
+  .chart-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    color: var(--color-text, #1a1a1a);
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .tooltip-phase {
+    font-family: var(--font-heading, sans-serif);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .tooltip-f1 {
+    color: var(--color-text-secondary, #555);
+  }
+
+  .tooltip-delta {
+    color: var(--color-text-tertiary, #888);
+    font-size: 11px;
+  }
+</style>
+
+<script>
+  function initCumulativeProgress() {
+    const wrapper = document.getElementById("cumulative-progress-chart");
+    if (!wrapper) return;
+
+    const bars = wrapper.querySelectorAll<SVGRectElement>(".bar-rect");
+    const f1Labels = wrapper.querySelectorAll<SVGTextElement>(".f1-label");
+    const deltaLabels = wrapper.querySelectorAll<SVGTextElement>(".delta-label");
+    const tooltip = document.getElementById("cp-tooltip");
+    const ttPhase = document.getElementById("cp-tt-phase");
+    const ttF1 = document.getElementById("cp-tt-f1");
+    const ttDelta = document.getElementById("cp-tt-delta");
+
+    let animated = false;
+
+    function animateBars() {
+      if (animated) return;
+      animated = true;
+
+      bars.forEach((bar, i) => {
+        const targetY = parseFloat(bar.getAttribute("data-target-y") || "0");
+        const targetH = parseFloat(bar.getAttribute("data-target-h") || "0");
+
+        bar.style.transition = `none`;
+        // Force reflow
+        bar.getBoundingClientRect();
+
+        setTimeout(() => {
+          bar.style.transition = `all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
+          bar.setAttribute("y", String(targetY));
+          bar.setAttribute("height", String(targetH));
+        }, i * 100);
+
+        // Show labels after bar animation
+        setTimeout(() => {
+          const idx = bar.getAttribute("data-index") || "0";
+          f1Labels.forEach((lbl) => {
+            if (lbl.getAttribute("data-index") === idx) {
+              lbl.setAttribute("opacity", "1");
+            }
+          });
+          deltaLabels.forEach((lbl) => {
+            if (lbl.getAttribute("data-index") === idx) {
+              lbl.setAttribute("opacity", "1");
+            }
+          });
+        }, i * 100 + 500);
+      });
+    }
+
+    // IntersectionObserver to trigger animation
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateBars();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(wrapper);
+
+    // Tooltip logic
+    bars.forEach((bar) => {
+      bar.addEventListener("mouseenter", (e: MouseEvent) => {
+        if (!tooltip || !ttPhase || !ttF1 || !ttDelta) return;
+
+        const label = bar.getAttribute("data-label") || "";
+        const f1 = bar.getAttribute("data-f1") || "";
+        const delta = parseFloat(bar.getAttribute("data-delta") || "0");
+        const isBaseline = bar.getAttribute("data-is-baseline") === "true";
+
+        ttPhase.textContent = label;
+        ttF1.textContent = `F1 = ${parseFloat(f1).toFixed(3)}`;
+        ttDelta.textContent = isBaseline
+          ? "\u0394F1 = baseline"
+          : `\u0394F1 = +${delta.toFixed(3)}`;
+
+        tooltip.style.display = "block";
+      });
+
+      bar.addEventListener("mousemove", (e: MouseEvent) => {
+        if (!tooltip) return;
+        const rect = wrapper.getBoundingClientRect();
+        const x = e.clientX - rect.left + 12;
+        const y = e.clientY - rect.top - 10;
+
+        // Keep tooltip within wrapper bounds
+        const tipRect = tooltip.getBoundingClientRect();
+        const maxX = rect.width - tipRect.width - 8;
+
+        tooltip.style.left = `${Math.min(x, maxX)}px`;
+        tooltip.style.top = `${Math.max(0, y - tipRect.height)}px`;
+      });
+
+      bar.addEventListener("mouseleave", () => {
+        if (!tooltip) return;
+        tooltip.style.display = "none";
+      });
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCumulativeProgress);
+  } else {
+    initCumulativeProgress();
+  }
+  document.addEventListener("astro:page-load", initCumulativeProgress);
+</script>

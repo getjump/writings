@@ -1,0 +1,614 @@
+---
+const thetaBins = [
+  { min: -8, max: -7, count: 10 },
+  { min: -7, max: -6, count: 25 },
+  { min: -6, max: -5, count: 55 },
+  { min: -5, max: -4, count: 80 },
+  { min: -4, max: -3, count: 110 },
+  { min: -3, max: -2, count: 130 },
+  { min: -2, max: -1, count: 155 },
+  { min: -1, max: 0, count: 170 },
+  { min: 0, max: 1, count: 230 },
+  { min: 1, max: 2, count: 460 },
+  { min: 2, max: 3, count: 1130 },
+  { min: 3, max: 4, count: 600 },
+  { min: 4, max: 5, count: 500 },
+  { min: 5, max: 6, count: 310 },
+  { min: 6, max: 7, count: 220 },
+  { min: 7, max: 8, count: 150 },
+  { min: 8, max: 9, count: 140 },
+  { min: 9, max: 10, count: 100 },
+];
+
+const diffBins = [
+  { min: -8, max: -7, count: 50 },
+  { min: -7, max: -6, count: 200 },
+  { min: -6, max: -5, count: 400 },
+  { min: -5, max: -4, count: 580 },
+  { min: -4, max: -3, count: 900 },
+  { min: -3, max: -2, count: 1550 },
+  { min: -2, max: -1, count: 1300 },
+  { min: -1, max: 0, count: 750 },
+  { min: 0, max: 1, count: 580 },
+  { min: 1, max: 2, count: 350 },
+  { min: 2, max: 3, count: 270 },
+  { min: 3, max: 4, count: 160 },
+  { min: 4, max: 5, count: 80 },
+  { min: 5, max: 6, count: 50 },
+  { min: 6, max: 7, count: 20 },
+  { min: 7, max: 8, count: 10 },
+];
+
+const thetaMean = 1.71;
+const diffMean = -1.11;
+
+const svgW = 340;
+const svgH = 260;
+const mTop = 32;
+const mBottom = 36;
+const mLeft = 44;
+const mRight = 16;
+const plotW = svgW - mLeft - mRight;
+const plotH = svgH - mTop - mBottom;
+
+function buildBars(
+  bins: { min: number; max: number; count: number }[],
+  mean: number,
+) {
+  const xMin = bins[0].min;
+  const xMax = bins[bins.length - 1].max;
+  const xRange = xMax - xMin;
+  const maxCount = Math.max(...bins.map((b) => b.count));
+
+  // Round maxCount up to a nice number for y-axis
+  const yMax = Math.ceil(maxCount / 200) * 200;
+
+  const barGap = 1;
+
+  function xScale(val: number) {
+    return mLeft + ((val - xMin) / xRange) * plotW;
+  }
+
+  function yScale(val: number) {
+    return mTop + plotH - (val / yMax) * plotH;
+  }
+
+  return { xMin, xMax, xRange, yMax, barGap, xScale, yScale };
+}
+
+const theta = buildBars(thetaBins, thetaMean);
+const diff = buildBars(diffBins, diffMean);
+
+// Y-axis ticks helper
+function yTicks(yMax: number, steps: number) {
+  const step = yMax / steps;
+  return Array.from({ length: steps + 1 }, (_, i) => Math.round(i * step));
+}
+
+const thetaYTicks = yTicks(theta.yMax, 4);
+const diffYTicks = yTicks(diff.yMax, 4);
+
+// X-axis ticks: every 2 units
+function xTicksFor(xMin: number, xMax: number) {
+  const ticks: number[] = [];
+  for (let v = Math.ceil(xMin / 2) * 2; v <= xMax; v += 2) {
+    ticks.push(v);
+  }
+  return ticks;
+}
+
+const thetaXTicks = xTicksFor(thetaBins[0].min, thetaBins[thetaBins.length - 1].max);
+const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max);
+---
+
+<div class="irt-distributions-wrapper" id="irt-distributions">
+  <div class="irt-distributions-flex">
+    <!-- Theta histogram -->
+    <div class="irt-chart-container" data-chart="theta">
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Histogram of Contributor Strictness theta parameter"
+        style="width:100%;height:auto;display:block;"
+      >
+        <!-- Title -->
+        <text x={svgW / 2} y="18" text-anchor="middle" class="hist-title">
+          Contributor Strictness (&theta;)
+        </text>
+
+        <!-- Y-axis label -->
+        <text
+          x="12"
+          y={mTop + plotH / 2}
+          text-anchor="middle"
+          class="axis-label"
+          transform={`rotate(-90, 12, ${mTop + plotH / 2})`}
+        >Count</text>
+
+        <!-- Y grid + tick labels -->
+        {thetaYTicks.map((t) => {
+          const y = theta.yScale(t);
+          return (
+            <g>
+              <line x1={mLeft} y1={y} x2={mLeft + plotW} y2={y} class="grid-line" />
+              <text x={mLeft - 5} y={y + 3.5} text-anchor="end" class="tick-label">{t}</text>
+            </g>
+          );
+        })}
+
+        <!-- X-axis tick labels -->
+        {thetaXTicks.map((t) => {
+          const x = theta.xScale(t);
+          return (
+            <text x={x} y={mTop + plotH + 14} text-anchor="middle" class="tick-label">{t}</text>
+          );
+        })}
+
+        <!-- X-axis baseline -->
+        <line x1={mLeft} y1={mTop + plotH} x2={mLeft + plotW} y2={mTop + plotH} class="axis-line" />
+        <!-- Y-axis baseline -->
+        <line x1={mLeft} y1={mTop} x2={mLeft} y2={mTop + plotH} class="axis-line" />
+
+        <!-- Bars -->
+        {thetaBins.map((bin, i) => {
+          const x = theta.xScale(bin.min) + theta.barGap / 2;
+          const w = theta.xScale(bin.max) - theta.xScale(bin.min) - theta.barGap;
+          const barH = (bin.count / theta.yMax) * plotH;
+          const y = theta.yScale(bin.count);
+          return (
+            <rect
+              class="hist-bar theta-bar"
+              x={x}
+              y={mTop + plotH}
+              width={w}
+              height={0}
+              data-target-y={y}
+              data-target-h={barH}
+              data-index={i}
+              data-min={bin.min}
+              data-max={bin.max}
+              data-count={bin.count}
+              data-param="theta"
+            />
+          );
+        })}
+
+        <!-- Zero line -->
+        {theta.xScale(0) >= mLeft && theta.xScale(0) <= mLeft + plotW && (
+          <g>
+            <line
+              x1={theta.xScale(0)}
+              y1={mTop}
+              x2={theta.xScale(0)}
+              y2={mTop + plotH}
+              class="zero-line"
+            />
+            <text
+              x={theta.xScale(0)}
+              y={mTop - 4}
+              text-anchor="middle"
+              class="zero-label"
+            >0</text>
+          </g>
+        )}
+
+        <!-- Mean line -->
+        <line
+          class="mean-line theta-mean-line"
+          x1={theta.xScale(thetaMean)}
+          y1={mTop}
+          x2={theta.xScale(thetaMean)}
+          y2={mTop + plotH}
+          data-param="theta"
+          data-mean={thetaMean}
+        />
+        <text
+          x={mLeft + plotW - 4}
+          y={mTop + 12}
+          text-anchor="end"
+          class="mean-label theta-mean-label"
+        >mean={thetaMean.toFixed(2)}</text>
+      </svg>
+    </div>
+
+    <!-- Difficulty histogram -->
+    <div class="irt-chart-container" data-chart="diff">
+      <svg
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        aria-label="Histogram of Game times GPU Difficulty parameter d"
+        style="width:100%;height:auto;display:block;"
+      >
+        <!-- Title -->
+        <text x={svgW / 2} y="18" text-anchor="middle" class="hist-title">
+          Game&times;GPU Difficulty (d)
+        </text>
+
+        <!-- Y-axis label -->
+        <text
+          x="12"
+          y={mTop + plotH / 2}
+          text-anchor="middle"
+          class="axis-label"
+          transform={`rotate(-90, 12, ${mTop + plotH / 2})`}
+        >Count</text>
+
+        <!-- Y grid + tick labels -->
+        {diffYTicks.map((t) => {
+          const y = diff.yScale(t);
+          return (
+            <g>
+              <line x1={mLeft} y1={y} x2={mLeft + plotW} y2={y} class="grid-line" />
+              <text x={mLeft - 5} y={y + 3.5} text-anchor="end" class="tick-label">{t}</text>
+            </g>
+          );
+        })}
+
+        <!-- X-axis tick labels -->
+        {diffXTicks.map((t) => {
+          const x = diff.xScale(t);
+          return (
+            <text x={x} y={mTop + plotH + 14} text-anchor="middle" class="tick-label">{t}</text>
+          );
+        })}
+
+        <!-- X-axis baseline -->
+        <line x1={mLeft} y1={mTop + plotH} x2={mLeft + plotW} y2={mTop + plotH} class="axis-line" />
+        <!-- Y-axis baseline -->
+        <line x1={mLeft} y1={mTop} x2={mLeft} y2={mTop + plotH} class="axis-line" />
+
+        <!-- Bars -->
+        {diffBins.map((bin, i) => {
+          const x = diff.xScale(bin.min) + diff.barGap / 2;
+          const w = diff.xScale(bin.max) - diff.xScale(bin.min) - diff.barGap;
+          const barH = (bin.count / diff.yMax) * plotH;
+          const y = diff.yScale(bin.count);
+          return (
+            <rect
+              class="hist-bar diff-bar"
+              x={x}
+              y={mTop + plotH}
+              width={w}
+              height={0}
+              data-target-y={y}
+              data-target-h={barH}
+              data-index={i}
+              data-min={bin.min}
+              data-max={bin.max}
+              data-count={bin.count}
+              data-param="diff"
+            />
+          );
+        })}
+
+        <!-- Zero line -->
+        {diff.xScale(0) >= mLeft && diff.xScale(0) <= mLeft + plotW && (
+          <g>
+            <line
+              x1={diff.xScale(0)}
+              y1={mTop}
+              x2={diff.xScale(0)}
+              y2={mTop + plotH}
+              class="zero-line"
+            />
+            <text
+              x={diff.xScale(0)}
+              y={mTop - 4}
+              text-anchor="middle"
+              class="zero-label"
+            >0</text>
+          </g>
+        )}
+
+        <!-- Mean line -->
+        <line
+          class="mean-line diff-mean-line"
+          x1={diff.xScale(diffMean)}
+          y1={mTop}
+          x2={diff.xScale(diffMean)}
+          y2={mTop + plotH}
+          data-param="diff"
+          data-mean={diffMean}
+        />
+        <text
+          x={mLeft + plotW - 4}
+          y={mTop + 12}
+          text-anchor="end"
+          class="mean-label diff-mean-label"
+        >mean={diffMean.toFixed(2)}</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Shared tooltip -->
+  <div class="irt-tooltip" id="irt-tooltip" style="display:none;">
+    <div class="irt-tooltip-line1" id="irt-tt-line1"></div>
+    <div class="irt-tooltip-line2" id="irt-tt-line2"></div>
+  </div>
+</div>
+
+<style>
+  .irt-distributions-wrapper {
+    position: relative;
+    max-width: 100%;
+    margin: 1.5rem auto;
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 8px;
+    padding: 1rem;
+    background: var(--color-surface, #fff);
+    overflow: visible;
+  }
+
+  .irt-distributions-flex {
+    display: flex;
+    gap: 1rem;
+  }
+
+  @media (max-width: 639px) {
+    .irt-distributions-flex {
+      flex-direction: column;
+    }
+  }
+
+  .irt-chart-container {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .hist-title {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--color-text, #1a1a1a);
+  }
+
+  .axis-label {
+    font-family: var(--font-heading, sans-serif);
+    font-size: 10px;
+    fill: var(--color-text-secondary, #555);
+  }
+
+  .tick-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    fill: var(--color-text-tertiary, #888);
+  }
+
+  .grid-line {
+    stroke: var(--color-border, #e5e5e3);
+    stroke-width: 0.5;
+  }
+
+  .axis-line {
+    stroke: var(--color-text-tertiary, #888);
+    stroke-width: 1;
+  }
+
+  .zero-line {
+    stroke: #999;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+  }
+
+  .zero-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    fill: #999;
+  }
+
+  .mean-line {
+    stroke-width: 1.5;
+    cursor: pointer;
+  }
+
+  .theta-mean-line {
+    stroke: #4a7fb5;
+  }
+
+  .diff-mean-line {
+    stroke: #e8a838;
+  }
+
+  .mean-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  .theta-mean-label {
+    fill: #4a7fb5;
+  }
+
+  .diff-mean-label {
+    fill: #e8a838;
+  }
+
+  .hist-bar {
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .theta-bar {
+    fill: #4a7fb5;
+  }
+
+  .diff-bar {
+    fill: #e8a838;
+  }
+
+  .hist-bar:hover {
+    opacity: 0.75;
+  }
+
+  .irt-tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #e5e5e3);
+    border-radius: 6px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    color: var(--color-text, #1a1a1a);
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  .irt-tooltip-line1 {
+    font-weight: 600;
+    margin-bottom: 1px;
+  }
+
+  .irt-tooltip-line2 {
+    color: var(--color-text-secondary, #555);
+    font-size: 10px;
+  }
+</style>
+
+<script>
+  function initIrtDistributions() {
+    const wrapper = document.getElementById("irt-distributions");
+    if (!wrapper) return;
+
+    const allBars = wrapper.querySelectorAll<SVGRectElement>(".hist-bar");
+    const meanLines = wrapper.querySelectorAll<SVGLineElement>(".mean-line");
+    const tooltip = document.getElementById("irt-tooltip");
+    const ttLine1 = document.getElementById("irt-tt-line1");
+    const ttLine2 = document.getElementById("irt-tt-line2");
+
+    // Reset bars to initial state (for astro:page-load re-init)
+    const bottomY = allBars.length > 0 ? allBars[0].getAttribute("y") : null;
+    allBars.forEach((bar) => {
+      // Read the original bottom from the SVG setup
+      const targetY = parseFloat(bar.getAttribute("data-target-y") || "0");
+      const targetH = parseFloat(bar.getAttribute("data-target-h") || "0");
+      const bottom = targetY + targetH;
+      bar.setAttribute("y", String(bottom));
+      bar.setAttribute("height", "0");
+      bar.style.transition = "none";
+    });
+
+    let animated = false;
+
+    function animateBars() {
+      if (animated) return;
+      animated = true;
+
+      allBars.forEach((bar, i) => {
+        const targetY = parseFloat(bar.getAttribute("data-target-y") || "0");
+        const targetH = parseFloat(bar.getAttribute("data-target-h") || "0");
+
+        bar.getBoundingClientRect(); // force reflow
+
+        setTimeout(() => {
+          bar.style.transition =
+            "y 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), height 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+          bar.setAttribute("y", String(targetY));
+          bar.setAttribute("height", String(targetH));
+        }, i * 30);
+      });
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateBars();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.25 },
+    );
+    observer.observe(wrapper);
+
+    function showTooltip(
+      e: MouseEvent,
+      line1: string,
+      line2: string,
+    ) {
+      if (!tooltip || !ttLine1 || !ttLine2) return;
+      ttLine1.textContent = line1;
+      ttLine2.textContent = line2;
+      tooltip.style.display = "block";
+      positionTooltip(e);
+    }
+
+    function positionTooltip(e: MouseEvent) {
+      if (!tooltip) return;
+      const rect = wrapper.getBoundingClientRect();
+      const tipRect = tooltip.getBoundingClientRect();
+      let x = e.clientX - rect.left + 14;
+      let y = e.clientY - rect.top - tipRect.height - 8;
+      const maxX = rect.width - tipRect.width - 8;
+      if (x > maxX) x = maxX;
+      if (y < 0) y = e.clientY - rect.top + 14;
+      tooltip.style.left = `${x}px`;
+      tooltip.style.top = `${y}px`;
+    }
+
+    function hideTooltip() {
+      if (tooltip) tooltip.style.display = "none";
+    }
+
+    // Bar tooltips
+    allBars.forEach((bar) => {
+      bar.addEventListener("mouseenter", (e: MouseEvent) => {
+        const param = bar.getAttribute("data-param");
+        const min = bar.getAttribute("data-min");
+        const max = bar.getAttribute("data-max");
+        const count = bar.getAttribute("data-count");
+
+        let line1: string;
+        let line2: string;
+
+        if (param === "theta") {
+          line1 = `\u03B8 \u2208 [${min}, ${max})`;
+          line2 = `${count} contributors`;
+        } else {
+          line1 = `d \u2208 [${min}, ${max})`;
+          line2 = `${count} game\u00D7GPU pairs`;
+        }
+
+        showTooltip(e, line1, line2);
+      });
+
+      bar.addEventListener("mousemove", positionTooltip);
+      bar.addEventListener("mouseleave", hideTooltip);
+    });
+
+    // Mean line tooltips
+    meanLines.forEach((line) => {
+      line.addEventListener("mouseenter", (e: MouseEvent) => {
+        const param = line.getAttribute("data-param");
+        const mean = line.getAttribute("data-mean");
+
+        let line1: string;
+        let line2: string;
+
+        if (param === "theta") {
+          line1 = `Mean \u03B8 = ${mean}`;
+          line2 = "Most contributors are 'strict' (report more tinkering)";
+        } else {
+          line1 = `Mean d = ${mean}`;
+          line2 = "Most game\u00D7GPU pairs are 'easy' (fewer issues)";
+        }
+
+        showTooltip(e, line1, line2);
+      });
+
+      line.addEventListener("mousemove", positionTooltip);
+      line.addEventListener("mouseleave", hideTooltip);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initIrtDistributions);
+  } else {
+    initIrtDistributions();
+  }
+  document.addEventListener("astro:page-load", initIrtDistributions);
+</script>

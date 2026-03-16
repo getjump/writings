@@ -1,0 +1,228 @@
+---
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  headings: Heading[];
+}
+
+const { headings } = Astro.props;
+const items = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
+---
+
+{items.length > 0 && (
+  <>
+    {/* Desktop: fixed sidebar */}
+    <nav class="toc toc-desktop" aria-label="Table of contents">
+      <ul>
+        {items.map((h) => (
+          <li class={h.depth === 3 ? "indent" : undefined}>
+            <a href={`#${h.slug}`} data-slug={h.slug}>{h.text}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    {/* Mobile: collapsible at top */}
+    <details class="toc toc-mobile">
+      <summary>Contents</summary>
+      <ul>
+        {items.map((h) => (
+          <li class={h.depth === 3 ? "indent" : undefined}>
+            <a href={`#${h.slug}`}>{h.text}</a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </>
+)}
+
+<script>
+  function initToc() {
+    const links = document.querySelectorAll<HTMLAnchorElement>(".toc-desktop a[data-slug]");
+    if (!links.length) return;
+
+    let current = "";
+
+    function setActive(id: string) {
+      if (id === current) return;
+      current = id;
+      links.forEach((l) => l.classList.toggle("active", l.dataset.slug === id));
+    }
+
+    const ids = Array.from(links).map((l) => l.dataset.slug!);
+    function onScroll() {
+      let active = ids[0];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top < 120) active = id;
+      }
+      setActive(active);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+
+    // Smooth scroll for desktop
+    links.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        document.getElementById(link.dataset.slug!)?.scrollIntoView({ behavior: "smooth" });
+        history.replaceState(null, "", `#${link.dataset.slug}`);
+      });
+    });
+
+    // Close mobile ToC on link click
+    document.querySelectorAll<HTMLAnchorElement>(".toc-mobile a").forEach((link) => {
+      link.addEventListener("click", () => {
+        const details = link.closest("details");
+        if (details) details.open = false;
+      });
+    });
+  }
+
+  initToc();
+  document.addEventListener("astro:page-load", initToc);
+</script>
+
+<style>
+  /* Desktop sidebar */
+  .toc-desktop {
+    position: fixed;
+    top: 5rem;
+    width: 180px;
+    max-height: calc(100vh - 7rem);
+    overflow-y: auto;
+    display: none;
+    z-index: 10;
+    scrollbar-width: none;
+  }
+
+  .toc-desktop::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (min-width: 1280px) {
+    .toc-desktop {
+      display: block;
+      left: max(1.5rem, calc((100vw - 980px) / 2 - 200px));
+    }
+  }
+
+  /* Mobile collapsible */
+  .toc-mobile {
+    display: block;
+    margin-bottom: var(--space-lg);
+    border-left: 2px solid var(--color-border);
+    padding-left: var(--space-md);
+  }
+
+  .toc-mobile summary {
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    padding: 0.375rem 0;
+  }
+
+  .toc-mobile summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc-mobile summary::before {
+    content: "";
+    display: inline-block;
+    width: 0.375em;
+    height: 0.375em;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease;
+    margin-right: 0.5em;
+    opacity: 0.5;
+  }
+
+  .toc-mobile[open] > summary::before {
+    transform: rotate(45deg);
+  }
+
+  @media (min-width: 1280px) {
+    .toc-mobile {
+      display: none;
+    }
+  }
+
+  /* Shared list styles */
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .toc-desktop ul {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .toc-mobile ul {
+    margin-top: var(--space-sm);
+  }
+
+  li {
+    margin: 0;
+  }
+
+  li.indent a {
+    padding-left: 1.25rem;
+    font-size: 0.625rem;
+  }
+
+  .toc-mobile li.indent a {
+    padding-left: 1.25rem;
+    font-size: 0.75rem;
+  }
+
+  /* Desktop links */
+  .toc-desktop a {
+    display: block;
+    padding: 0.25rem 0 0.25rem 0.75rem;
+    font-family: var(--font-heading);
+    font-size: 0.6875rem;
+    line-height: 1.4;
+    color: var(--color-text-tertiary);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    margin-left: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .toc-desktop a:hover {
+    color: var(--color-text-secondary);
+  }
+
+  .toc-desktop a:global(.active) {
+    color: var(--color-text);
+    border-left-color: var(--color-text);
+    font-weight: 500;
+  }
+
+  /* Mobile links */
+  .toc-mobile a {
+    display: block;
+    padding: 0.3rem 0;
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .toc-mobile a:hover {
+    color: var(--color-text);
+  }
+</style>

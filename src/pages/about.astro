@@ -1,0 +1,22 @@
+---
+import Layout from "../components/Layout.astro";
+import Heading from "../components/Heading.astro";
+import Prose from "../components/Prose.astro";
+---
+
+<Layout title="About" description="About this blog.">
+  <section class="about">
+    <Heading as="h1">About</Heading>
+    <Prose>
+      <p>
+        A quiet place for writing about technology, systems, and the craft of building software.
+      </p>
+    </Prose>
+  </section>
+</Layout>
+
+<style>
+  .about {
+    max-width: var(--width-content);
+  }
+</style>

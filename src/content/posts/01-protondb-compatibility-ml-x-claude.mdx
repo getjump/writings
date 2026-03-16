@@ -1,0 +1,379 @@
+---
+title: "I Don't Know ML. Claude Does. 0.871 F1 on Predicting Linux Game Compatibility."
+description: 'Building a system that predicts Linux game compatibility using 350K+ community reports and Claude as an ML research partner.'
+date: 2026-03-16
+---
+import Callout from '../../components/Callout.astro';
+import Collapsible from '../../components/Collapsible.astro';
+import TableEnhancements from '../../components/TableEnhancements.astro';
+import CumulativeProgress from '../../components/charts/CumulativeProgress.astro';
+import ConfusionMatrices from '../../components/charts/ConfusionMatrices.astro';
+import ErrorBreakdown from '../../components/charts/ErrorBreakdown.astro';
+import IrtDistributions from '../../components/charts/IrtDistributions.astro';
+
+<TableEnhancements />
+
+I'm a software engineer who knows ML at a surface level — a few papers read (never understood), zero serious ML projects shipped. Over two weeks, I built a system that predicts Linux game compatibility, achieving **0.871 F1** on 350K+ community reports. The key innovation came from a statistical technique I'd never heard of before Claude suggested it.
+
+This post is two stories woven together: how the project works, and how a human-AI research loop made it possible.
+
+<Callout type="info" title="TL;DR">
+- **What:** A cascade LightGBM classifier predicting Linux game compatibility from ProtonDB data
+- **Result:** 0.871 F1 (3-class), 0.943 F1 (binary) — from 0.555 baseline
+- **Key innovation:** Item Response Theory (IRT) to separate annotator bias from ground truth — the single largest improvement (+0.047 F1)
+- **50+ experiments** across 22 phases in two weeks, all code written by Claude
+- **Biggest lesson:** The bottleneck was label quality, not model architecture. Regex > LLM for this task.
+- **Top 5 compatibility factors** (by SHAP): report age (1.10) — newer reports = better Proton, Proton variant — GE-Proton signals trouble, GPU driver version (0.21/0.18) — NVIDIA vs AMD matters, kernel version (0.20), GPU family (0.10) — generation matters more than brand
+</Callout>
+
+<Callout type="insight" title="Key takeaways">
+- **Claude doesn't replace ML expertise — it changes what you need to know.** The skill shifts from "I know all the techniques" to "I can assess proposals critically."
+- **The research loop matters more than any single technique.** IRT came from 11 phases of progressively understanding the problem. Each failure narrowed the search space.
+- **Negative results are underrated.** With Claude, each dead-end experiment took an hour instead of a day.
+- **50+ experiments in two weeks is a different game.** Quantity has a quality of its own when searching a large design space.
+</Callout>
+
+## The problem
+
+Linux gaming has gotten remarkably good thanks to Valve's Proton compatibility layer, but "will this game work on my hardware?" remains a frustrating question.
+
+### Why it's hard to answer
+
+Proton translates Windows API calls (DirectX, Win32) to Linux equivalents (Vulkan, native APIs). Whether this works depends on a messy combination of factors:
+
+- **Game engine** — Unity, Unreal, proprietary engines all have different compatibility profiles
+- **Graphics API** — DirectX 9 vs 11 vs 12 vs Vulkan native, each with different translation paths
+- **DRM and anticheat** — kernel-level anticheat like EAC or BattlEye may or may not support Proton
+- **GPU vendor and driver** — AMD's open-source Mesa stack vs NVIDIA's proprietary driver behave very differently
+- **Proton version** — official, GE-Proton (community patches), or experimental
+- **Kernel version** — newer kernels bring driver fixes and regressions alike
+- **Media codecs, launchers, overlays** — can fail for reasons entirely unrelated to the game itself
+
+A game that works flawlessly on AMD with GE-Proton might crash on NVIDIA with the same Proton version because of a driver-specific shader compilation bug. There's no deterministic compatibility matrix.
+
+### ProtonDB: crowdsourced signal
+
+[ProtonDB](https://www.protondb.com/) tries to solve this with crowdsourcing. Users report whether a game is **borked** (broken), **needs tinkering** (requires tweaks), or **works out of the box**, along with their system info and notes. There are 350K+ such reports for 31K games.
+
+The catch: these labels are subjective. One user says "I chose GE-Proton instead of the default — tinkering." Another does the same and says "works out of the box." This isn't random noise — it's systematic disagreement about what "tinkering" means, and it poisons any model you train on this data.
+
+## What I built
+
+A two-stage cascade classifier that predicts game compatibility per (game, hardware) pair:
+
+```d2
+direction: down
+
+input: Input: game + hardware
+stage1: "Stage 1: Broken?" {shape: diamond}
+borked: "Borked — F1 = 0.846"
+stage2: "Stage 2: Needs tweaking?" {shape: diamond}
+tinkering: "Tinkering — F1 = 0.880"
+works_oob: Works OOB
+vote: Per-game majority vote
+result: "Production F1 = 0.871"
+
+input -> stage1
+stage1 -> borked: borked
+stage1 -> stage2: works
+stage2 -> tinkering: tinkering
+stage2 -> works_oob: works_oob
+borked -> vote
+tinkering -> vote
+works_oob -> vote
+vote -> result
+```
+
+The full pipeline:
+
+```d2
+direction: right
+
+dump: ProtonDB Dump
+db: SQLite
+prep: Preprocessing
+train: Training
+api: API
+
+dump -> db -> prep -> train -> api
+```
+
+The system ingests ProtonDB data dumps, enriches them from Steam, PCGamingWiki, and other sources, trains LightGBM models with 123 features, and serves predictions via a FastAPI endpoint.
+
+But the interesting part isn't the architecture. It's the research journey that got me from 0.593 F1 to 0.871 — a 47% relative improvement — and how Claude guided that journey.
+
+## The research loop
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Start" data-f1="0.000" />
+
+I started this project by opening Claude Code and saying something like "let's plan a simple web API that predicts game compatibility from ProtonDB data." From that point, a pattern emerged that repeated over 7,000+ messages across two weeks:
+
+```d2
+direction: right
+
+describe: "Describe problem"
+propose: "Claude proposes"
+approve: "Approve?" {shape: diamond}
+implement: "Implement + experiment"
+interpret: "Interpret results"
+
+describe -> propose -> approve
+approve -> implement: yes
+approve -> propose: modify
+implement -> interpret -> describe
+```
+
+Claude didn't just advise — it wrote **all** the code. The entire project — worker, preprocessing pipeline, LLM normalization, ML training, FastAPI server, CLI — every line was written by Claude.
+
+Beyond implementation, it also conducted research into external data sources (Steam API, PCGamingWiki, AreWeAntiCheatYet, Steam PICS bulk protocol), investigated which features could be extracted, and ran feature importance analysis. My role was direction, domain judgment, and quality control — not writing code.
+
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Phase 1: Baseline" data-f1="0.555 → 0.593" />
+
+### Phase 1: The baseline and the ceiling (F1 = 0.555 → 0.593)
+
+The first model was straightforward — a single 3-class LightGBM on hardware features plus game metadata.
+
+F1 = 0.555. The model was essentially guessing on `works_oob` — 56% error rate, with most samples misclassified as `tinkering`. `borked` was somewhat separable, but `tinkering` and `works_oob` were a single smeared blob.
+
+Claude analyzed the error clustering and proposed splitting the problem: use a **two-stage cascade** — first ask "is it broken?", then for non-broken games ask "does it need tweaking?" This gave us +0.009 F1 (to 0.593). A modest gain, but the right framing.
+
+<Callout type="warning">
+78% of remaining errors were `tinkering` confused with `works_oob` in Stage 2. The problem was entirely in the subjective boundary.
+</Callout>
+
+---
+
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Phase 2: Features" data-f1="0.593 → 0.724" />
+
+### Phase 2: Feature archaeology (F1 = 0.593 → 0.724)
+
+Claude proposed mining untapped data fields. ProtonDB reports contain free-text notes — "had to set `PROTON_USE_WINED3D=1`" or "just hit play and it worked perfectly." We hadn't touched this data.
+
+The breakthrough came in layers:
+
+- **Text features** — keyword detection, sentiment, note lengths: **+0.099 F1**
+- **Game metadata enrichment** — engine type, DRM, anticheat from PCGamingWiki/Steam: **+0.024 F1**
+- **SVD embeddings** — factorizing a GPU-family × game co-occurrence matrix into dense vectors: **+0.010 F1**
+- **Rule-based relabeling** — if a `tinkering` report mentions zero actual tweaks, relabel it as `works_oob`: **+0.010 F1**
+
+The SVD embeddings idea was particularly interesting — I wouldn't have thought to treat hardware-game compatibility as a collaborative filtering problem, but Claude framed it that way and it worked.
+
+<Collapsible title="LLM as a preprocessing tool (the part that didn't work)">
+
+I invested significant effort into using LLMs for data cleaning. Claude built the entire infrastructure — CLI commands, batch processing, multiple backends. But the honest result: **none of it improved ML metrics.**
+
+**GPU/CPU normalization.** ~35K unique GPU strings. We built an LLM pipeline to normalize them, but a heuristic normalizer based on regex covers 99.7% of data with no hallucinations. The LLM hallucinated numbers. Production uses the heuristic.
+
+**Launch options parsing.** ~16K unique Steam launch option strings → structured JSON. The pipeline works, but was never integrated. Per-game aggregate features come from simpler regex extraction.
+
+**Text extraction.** A three-layer pipeline for free-text reports. Architecture complete — prompts, schemas, validation. But `extracted_data` has 0 records. The text features that did improve F1 (+0.099) are simple keyword regex — no LLM involved.
+
+**LLM verdict inference.** We tried having the LLM directly classify reports. Result: −0.001 F1. IRT solves this better.
+
+<Callout type="insight" title="The lesson">
+We built a sophisticated LLM preprocessing stack and it contributed exactly zero to the final model. The heuristic normalizer, simple regex keywords, and IRT-based statistical denoising outperformed every LLM approach. Sometimes the boring solution wins.
+</Callout>
+
+</Collapsible>
+
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Phase 3: The Wall" data-f1="0.724" />
+
+---
+
+### Phase 3: The wall (F1 = 0.724)
+
+Then we hit a wall. Over Phases 9-11, we tried **14+ techniques** — focal loss, ordinal regression, knowledge distillation, CatBoost, XGBoost, stacking ensembles, Node2Vec graph embeddings, target encoding — and **every single one was neutral or negative.**
+
+This is the part that would have killed the project if I were working alone. When you've tried everything you know and nothing works, the natural instinct is to give up or start over.
+
+I asked Claude to generate visualizations — t-SNE, UMAP, confusion matrices, calibration curves. Claude not only produced the plots but analyzed them itself — identifying that errors lived almost entirely on the `tinkering`↔`works_oob` boundary and were concentrated around specific (game, GPU family) pairs.
+
+<ErrorBreakdown />
+
+<Callout type="insight">
+The diagnosis crystallized: the model architecture wasn't the bottleneck; the **label quality** was. No amount of model swapping or feature engineering would fix labels where annotators genuinely disagreed.
+</Callout>
+
+The conversation shifted from "what feature should we add next?" to "what's the nature of this noise?"
+
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Phase 4: IRT Breakthrough" data-f1="0.724 → 0.771" />
+
+---
+
+### Phase 4: The IRT breakthrough (F1 = 0.724 → 0.771)
+
+This is the moment that made the project.
+
+I had a hypothesis: the noise isn't random — it's annotator bias. Different people have genuinely different thresholds for "tinkering." I asked Claude for a technique that could decompose subjective labels into annotator bias and ground truth.
+
+Claude recognized this as a known problem in psychometrics and proposed **Item Response Theory**. The core idea: decompose each label into two components:
+
+- $\theta$ **(theta):** how strict the annotator is (their personal threshold)
+- $d$ **(difficulty):** how objectively difficult the game actually is to run
+
+The formula:
+
+$$P(\text{tinkering}) = \sigma(\theta - d)$$
+
+A strict annotator (high $\theta$) is more likely to say "tinkering" for the same game that a lenient annotator (low $\theta$) would call "works out of the box."
+
+Once you have $\theta$ and $d$, you can:
+1. **Use them as features** — the model knows "this report comes from a strict annotator"
+2. **Relabel intelligently** — if a very strict annotator ($\theta > 1.5$) says `tinkering` but there's no evidence of actual tweaks, confidently relabel it as `works_oob`
+
+<Callout type="success" title="Results">
+**+0.030 F1** from IRT features alone — the single largest improvement from any technique across all 50+ experiments. Combined with contributor-aware relabeling: **+0.047 F1 total**. IRT features became the #2 and #4 most important features in Stage 2.
+</Callout>
+
+<IrtDistributions />
+
+<span aria-hidden="true" style="display:block;height:0;overflow:hidden" data-phase="Phase 5: Aggregation" data-f1="0.771 → 0.871" />
+
+---
+
+### Phase 5: Aggregation (F1 = 0.771 → 0.871)
+
+The final insight was almost embarrassingly simple: users don't ask "what does this one report predict?" — they ask "will this game work?"
+
+If you have 15 reports for a game and your model gets 12 right, majority vote gives you the correct answer even though per-report accuracy is imperfect.
+
+Per-game majority voting boosted F1 from 0.780 to **0.871** — a +0.091 improvement, the largest absolute gain in the project. Individual errors cancel out.
+
+<ConfusionMatrices />
+
+<CumulativeProgress />
+
+## Everything we tried
+
+Here's the full inventory across 22 phases. Most things didn't work — that's the point.
+
+### Features that made the cut
+
+| Feature | Source | Phase | ΔF1 |
+|---|---|---|---|
+| **IRT game difficulty (d)** | IRT 1PL on contributor×game | 12 | **+0.030** |
+| **IRT contributor strictness ($\theta$)** | IRT 1PL on contributor×game | 12 | (part of above) |
+| **Per-game customization rates** (protontricks %, config %, custom proton %) | Aggregated from reports | 9.2 | **+0.024** |
+| **Per-game launch flag rates** (esync, fsync, wined3d, nvapi, etc.) | Aggregated from reports | 9.2 | **+0.008** |
+| **variant** (official / GE / experimental / native) | Report Proton type | 1 | Top Stage 2 feature by SHAP |
+| **Game SVD embeddings** (20d) | GPU×Variant×Engine×Deck co-occurrence SVD | 8 | **+0.008** vs original |
+| **GPU SVD embeddings** (16d) | GPU-family×Game co-occurrence SVD | 1 | ΔF1 −0.003 when removed |
+| **has_concluding_notes, concluding_notes_length, fault_notes_count** | Report text metadata | 5 | **+0.077** (group) |
+| **mentions_crash, mentions_fix, mentions_perfect** | Regex on notes | 5 | **+0.045** (group) |
+| **mentions_env_var, mentions_proton_version, mentions_performance** | Regex on notes | 5 | (part of above) |
+| **sentiment_positive_words, sentiment_negative_words** | Word counting | 5 | (part of above) |
+| **kernel_major** | System info | 1 | SHAP 0.20 |
+| **nvidia_driver_version, mesa_driver_version** | System info + normalization | 4 | SHAP 0.21/0.18 |
+| **is_apu, is_igpu, is_mobile, is_steam_deck** | Hardware classification | 5 | Form factor signals |
+| **report_age_days** | Timestamp delta | 5 | SHAP 1.10 — top feature overall |
+| **gpu_family** | Normalized GPU string | 1 | SHAP 0.10 |
+| **contributor-aware relabeling** | IRT $\theta$ thresholds | 13.2 | **+0.017** |
+| **label smoothing $\alpha = 0.15$** | Training technique | 9.1 | **+0.002** |
+| **cross-entropy objective** | LightGBM config | 9.1 | **+0.018** |
+| **Cleanlab noise removal (3%)** | Confident learning | 9.3 | **+0.021** |
+
+<Collapsible title="Features and techniques that didn't work (20 experiments)">
+
+| Feature / Technique | Source | Phase | ΔF1 | Why it failed |
+|---|---|---|---|---|
+| **Focal loss** | Training technique | 9.4 | **−0.133** | Amplifies noise for noisy labels |
+| **Factorization Machines** | Model architecture | 15.7 | **−0.013** | Overfits on interaction terms |
+| **Game verdict trend** (temporal slope) | Aggregated time series | 15.3 | **−0.010** | Introduced temporal bias |
+| **Proton×Game SVD embeddings** | Co-occurrence | 15.6 | **−0.017** | report_age_days already captures temporal signal |
+| **Node2Vec graph embeddings** | Game-hardware graph | 9.5 | **−0.008** | SVD already captures structure |
+| **Proton×DX interaction features** | Cross-features | 15.4 | **−0.008** | Overfitting |
+| **Variant sub-models** (separate model per Proton type) | Model architecture | 9.4 | **−0.041** | Fragments training data |
+| **Game best Proton version, regression flags** | Temporal analysis | 15.3b | **−0.007** | Temporal bias |
+| **CatBoost, XGBoost, HistGBM** | Alternative models | 11 | **−0.002** | LightGBM already optimal |
+| **Ordinal regression** | Model architecture | 9.4 | **−0.002** | Already well-calibrated |
+| **Text distillation** (teacher→student) | Knowledge distillation | 9.4 | **−0.004** | Text features weak at inference |
+| **Hierarchical target encoding** | Feature engineering | 9.5 | **−0.002** | Overfitting |
+| **ProtonDB tier + community score** | External signal | 9.5 | **−0.002** | Target leakage |
+| **CPU SVD embeddings** (16d) | CPU×Game co-occurrence | 1 | ≈0 | CPUs too homogeneous, no signal |
+| **Text embeddings** (sentence-transformers, 32d) | Verdict notes | 10 | **+0.005** but marginal | Low coverage (32%), redundant with keywords |
+| **Dawid-Skene** | Annotator noise model | 9.3 | **−0.058** | Needs per-annotator confusion matrix; too many parameters |
+| **Confidence weighting** | Training technique | 13.3 | **−0.001** | Introduces weighting bias |
+| **Threshold optimization** | Post-hoc calibration | 18 | ≈0 | Already well-calibrated |
+| **LLM verdict inference** | OpenRouter | 19 | **−0.001** | IRT already optimal |
+| **Time-decay sample weighting** | Training technique | 15.2 | ≈0 | No improvement |
+
+</Collapsible>
+
+<Collapsible title="Features that looked great but were target leakage">
+
+| Feature | Source | Gain | Why it's leakage |
+|---|---|---|---|
+| **tried_oob** | Report form field | 2.5M | Part of the label definition — user marks this in the same form as verdict |
+| **duration** (playtime) | Report form field | 252K | Borked games have short duration by definition |
+| **Per-report fault booleans** (8 fields) | Report form | 3.8M total | User describes faults alongside verdict — same observation |
+| **Per-report customization flags** (11 fields) | Report form | 31K | "Did you tweak?" is the definition of tinkering |
+| **pct_works_oob** (per-game) | Aggregated verdicts | SHAP 1.06 | Literally the target aggregated |
+
+</Collapsible>
+
+<Collapsible title="Dropped as redundant (Phase 7 ablation)">
+
+| Feature | ΔF1 when dropped | Reason |
+|---|---|---|
+| engine | **+0.004** (improved!) | High cardinality, noisy; game embeddings capture it better |
+| gpu_vendor | ≈0 | Redundant with gpu_family |
+| ram_gb | −0.001 | Weak signal |
+| cpu_generation, cpu_vendor | ≈0 | Redundant, no signal |
+| os_family | ≈0 | Almost always Linux |
+| developer, publisher | ≈0 | High cardinality noise |
+| genre, release_year | ≈0 | Weak |
+| graphics_api_* (5 binary) | −0.002 | Captured by game embeddings |
+| anticheat, drm (game-level) | −0.001 | Sparse coverage |
+| deck_status, deck battery/readable | −0.002 | 13% coverage |
+| gpu_tier | −0.002 | Redundant with gpu embeddings |
+
+*Steam PICS features (Phase 14):* 18 features from Steam's bulk content protocol. Every single one was redundant with existing signals. ΔF1 ≈ 0.
+
+</Collapsible>
+
+## What Claude is good at (and what it isn't)
+
+After 7,000+ messages I have a clear picture of where Claude excels and where it doesn't.
+
+<Callout type="success" title="Where Claude excels">
+
+**Pattern-matching to known techniques.** Cascade classifiers, SVD embeddings, label smoothing, Cleanlab, IRT — all established methods. When I hypothesized that noise was systematic annotator bias, Claude recognized this as a known problem in psychometrics and proposed IRT. It didn't invent the framing — I did. But it retrieved the right tool from a vast library. This collapses the search from "read 200 papers" to "here's what applies and why."
+
+**Feature engineering from known patterns.** SVD from co-occurrence matrices is collaborative filtering 101. Per-game aggregates are standard. Text keywords are textbook NLP. Together they contributed +0.143 F1.
+
+**Experiment management.** Across 22 phases, Claude maintained structured plans, tracked results, and scored experiments by expected lift, cost, and inference availability.
+
+</Callout>
+
+<Callout type="warning" title="Where the human leads">
+
+**Reframing the problem.** The pivot from "fix the model" to "fix the labels" was a judgment call based on domain intuition, not pattern matching. Claude would have happily kept proposing more features indefinitely.
+
+**Catching target leakage.** When Claude proposed `pct_works_oob`, I caught that it *was* the target. Claude didn't flag this — I did, because I understood the causal structure.
+
+**Knowing when to stop.** Recognizing that the labels were wrong required understanding what "tinkering" actually means to different Linux gamers — domain knowledge, not pattern recognition.
+
+</Callout>
+
+<Callout type="insight">
+Claude proposes things it has seen. It's a phenomenal librarian — it retrieves relevant techniques from an enormous collection. But the creative work — reframing problems, catching subtle data issues, deciding when the approach is fundamentally wrong — stays with the human. The collaboration works because these capabilities complement each other perfectly.
+</Callout>
+
+## Try it
+
+The project is open source: [protondb-game-compatibility-prediction](https://github.com/getjump/protondb-game-compatibility-prediction). The IRT implementation is in `protondb_settings/ml/irt.py`, and the full experiment history is documented in `docs/PLAN_ML_*.md`.
+
+If you're considering using an AI coding assistant for ML research — not just code generation, but actual research — my advice is: **focus on the loop, not the output.** Claude will retrieve every known technique that fits your problem. But it won't tell you when to stop, when the problem is framed wrong, or when a technically correct feature is actually target leakage. That's still your job.
+
+The magic is in the combination: Claude's library plus your judgment, iterated 50 times instead of 5.
+
+This workflow is becoming a pattern. Andrej Karpathy's [autoresearch](https://github.com/karpathy/autoresearch) project automates ML experiment loops — 100+ experiments overnight. The [autoresearch skill for Claude Code](https://github.com/uditgoenka/autoresearch) generalizes this into a reusable skill. I didn't use either — my workflow was more ad-hoc, with me in the loop at every step — but if you're starting a similar project, they're worth a look.
+
+<Collapsible title="The data Valve actually has">
+
+Valve is sitting on the ideal dataset and they don't need ProtonDB at all. On Steam Deck, there's an opt-in prompt for FPS telemetry — frame times, crash events, hardware state — collected automatically.
+
+With that data you could model not just compatibility but **performance** (does it hold 60fps? where does it stutter?). And because Valve controls the entire stack — Proton, Mesa, the kernel, the hardware — they could A/B test changes at every layer. Ship a new DXVK version to 5% of users, measure the FPS delta across 10,000 games, roll back automatically if regressions appear.
+
+We're working with ProtonDB because that's what's publicly available. But the real solution to "will this game work on Linux?" is telemetry at scale, and Valve is the only entity positioned to do it.
+
+</Collapsible>

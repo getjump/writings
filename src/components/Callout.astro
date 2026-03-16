@@ -1,0 +1,71 @@
+---
+interface Props {
+  type?: "info" | "warning" | "success" | "insight";
+  title?: string;
+}
+
+const { type = "info", title } = Astro.props;
+---
+
+<aside class={`callout callout--${type}`} role="note">
+  {title && <p class="callout__title">{title}</p>}
+  <div class="callout__content">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .callout {
+    margin: 1.75em 0;
+    padding: var(--space-md) var(--space-md);
+    border-left: 3px solid var(--callout-accent);
+    background-color: var(--callout-bg);
+    border-radius: 0 4px 4px 0;
+  }
+
+  @media (min-width: 640px) {
+    .callout {
+      padding: var(--space-md) var(--space-lg);
+    }
+  }
+
+  .callout--info {
+    --callout-accent: #4a7fb5;
+    --callout-bg: rgba(74, 127, 181, 0.06);
+  }
+
+  .callout--warning {
+    --callout-accent: #b5944a;
+    --callout-bg: rgba(181, 148, 74, 0.06);
+  }
+
+  .callout--success {
+    --callout-accent: #4a9e6b;
+    --callout-bg: rgba(74, 158, 107, 0.06);
+  }
+
+  .callout--insight {
+    --callout-accent: #7b5ea7;
+    --callout-bg: rgba(123, 94, 167, 0.06);
+  }
+
+  .callout__title {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--callout-accent);
+    margin-bottom: var(--space-xs);
+  }
+
+  .callout__content {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+  }
+
+  .callout__content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>
