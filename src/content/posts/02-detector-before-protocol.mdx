@@ -47,10 +47,10 @@ That single move turns a vibe into an experiment, and every protocol change into
 
 There are two very different distinguishers, and they produce different numbers. Not keeping them apart is the fastest way to lie to yourself.
 
-- **A label-free observer** builds a model of "normal browser traffic" and flags whatever doesn't fit. It has never seen a labelled example of my traffic. This is the realistic adversary — what someone can deploy before they even know the transport exists.
+- **A label-free observer** builds a model of "normal browser traffic" and flags whatever doesn't fit. It has never seen a labelled example of the candidate's traffic. This is the harder setting for a detector, and the one I treat as the honest baseline.
 - **A supervised observer** has labelled captures of both classes and trains directly on the difference. This is the strongest adversary the lab can build. It is what the attack rounds use, because it hands the developer the most information: not just *whether* the classes differ, but *where*.
 
-The supervised battery is the training signal. The label-free observer is the headline number. More on why both matter later.
+The supervised battery is the training signal. The label-free number is the conservative one. Reporting only one of them is how you fool yourself; more on that later.
 
 ## What I built
 
@@ -151,7 +151,7 @@ RED also caught a bug in the DEV iteration itself: a double-close that panicked 
 
 ## What an AUC of 0.44 means, and what it doesn't
 
-The number I'll put a name to: against a classifier a realistic observer could build **without any labelled samples of my traffic**, my transport scored an AUC of about **0.44** against the reference browser, where 0.5 is chance. That number comes from a separate rig with realistic packet sizes and injected loss and delay, not from the loopback pilots. And the route from ~1.0 to 0.44 was not clever shaping on the wire — the biggest single swing came from a configuration choice in *how the workload was driven*. The cheapest lever was in the setup, not the codec.
+The number I'll put a name to: against a **label-free** classifier — one trained without any labelled samples of the candidate's traffic — the candidate scored an AUC of about **0.44** against the reference browser in this setup, where 0.5 is chance. That number comes from a separate rig with realistic packet sizes and injected loss and delay, not from the loopback pilots, and like every number here it describes one lab configuration, not a deployment. The methodologically interesting part is where the movement in the metric came from: most of the swing between corpora traced back to *how the experiment itself was set up*, not to anything on the wire — one more reminder that a distinguisher reacts to the whole measurement, not just the component you think you're testing.
 
 What I can't claim: against a classifier *trained on labelled samples*, the picture is different, and in the pilot rounds — which are exactly that kind of supervised test — nothing ever dropped to chance on every detector at once. I treat the supervised result as an upper bound on separability, a property any proxy shares, rather than a failing grade.
 
@@ -193,4 +193,4 @@ Agents are very good at this particular failure. They read a red test as evidenc
 4. **Archive every adversary.** One extra table, most of the value.
 5. **Give the agents a referee** — a coverage report, a fuzzer, a detector, and a human who reads the contract.
 
-I'm not publishing the transport or its measurements in detail. Methodology helps everyone who reads it; the specific values help only one side of a distinguishing game. I'd rather give away the first. More posts will follow on the lab itself, the statistics behind a detector that has to be able to say "no", and how the agent loop ran day to day.
+I'm not publishing the transport or its measurements in detail. This post is about evaluation methodology, measurement pitfalls, and the AI-assisted development workflow; the protocol's implementation details are outside its scope. More posts will follow on the lab itself, the statistics behind a detector that has to be able to say "no", and how the agent loop ran day to day.
