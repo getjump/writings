@@ -4,13 +4,80 @@ import Heading from "../components/Heading.astro";
 import Prose from "../components/Prose.astro";
 ---
 
-<Layout title="About" description="About this blog.">
+<Layout
+  title="About"
+  description="Pavel Savinov - senior backend engineer (Go) based in Belgrade. Four years of production Go at Avito, Aviasales and Uzum."
+>
   <section class="about">
     <Heading as="h1">About</Heading>
     <Prose>
       <p>
-        A quiet place for writing about technology, systems, and the craft of building software.
+        I'm Pavel Savinov, a senior backend engineer working in Go. I have four years of
+        production Go on high-volume distributed systems at Avito, Aviasales and Uzum:
+        classifieds, flight search and e-commerce logistics with 15-50M monthly users. I'm based
+        in Belgrade (CET) and open to remote roles, B2B contracts and relocation to the
+        Netherlands or Germany.
       </p>
+
+      <h2>Highlights</h2>
+      <ul>
+        <li>
+          Cut search API p99.9 latency from ~5 s to ~500 ms at Aviasales through pprof-driven
+          optimization, caching and request shaping.
+        </li>
+        <li>
+          Took a parcel-sorting system at Uzum from PRD to production in 4 months: domain and
+          PostgreSQL model, Kafka integration via transactional outbox.
+        </li>
+        <li>
+          Kept 20+ promotion microservices at 99.9%+ availability (~3.5k RPS) at Avito.
+        </li>
+        <li>
+          Moved badge logic from mobile and web clients to a config-driven backend: a rollout went
+          from a sprint plus app releases to a 30-minute config change.
+        </li>
+      </ul>
+
+      <h2>Stack</h2>
+      <p>
+        Go, PostgreSQL, Kafka, Redis, gRPC, Kubernetes, Prometheus, Grafana, Jaeger. I use Claude
+        Code and custom agent harnesses in daily work.
+      </p>
+
+      <h2>Selected public work</h2>
+      <ul>
+        <li>
+          <a href="https://github.com/getjump/pr-review">pr-review</a> - an agent skill that
+          reviews a pull request by running it: three builds, one subtraction, then probes for
+          what no test covers.
+        </li>
+        <li>
+          <a href="https://github.com/getjump/protondb-game-compatibility-prediction"
+            >protondb-game-compatibility-prediction</a
+          > - predicting Linux game compatibility from 350K+ community reports with a two-stage
+          LightGBM cascade, 0.871 F1.
+          <a href="/posts/01-protondb-compatibility-ml-x-claude">Write-up</a>.
+        </li>
+        <li>
+          <a href="https://github.com/getjump/ru-php-the-right-way">ru-php-the-right-way</a> -
+          Russian translation of PHP: The Right Way, maintained by the community.
+        </li>
+      </ul>
+
+      <h2>Writing</h2>
+      <p>
+        Distributed systems, testing and building software with AI agents. Recent posts include
+        <a href="/posts/01-protondb-compatibility-ml-x-claude">I Don't Know ML. Claude Does.</a>
+        and
+        <a href="/posts/02-detector-before-protocol">I Built the Detector Before the Protocol. Then Two Agents Fought Over It.</a>
+      </p>
+
+      <h2>Contact</h2>
+      <ul>
+        <li><a href="https://www.linkedin.com/in/getjump">LinkedIn</a></li>
+        <li><a href="https://github.com/getjump">GitHub</a></li>
+        <li><a href="mailto:getjump0@gmail.com">getjump0@gmail.com</a></li>
+      </ul>
     </Prose>
   </section>
 </Layout>

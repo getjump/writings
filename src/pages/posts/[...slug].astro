@@ -28,6 +28,7 @@ const jsonLd = {
   "description": post.data.description,
   "datePublished": post.data.date.toISOString(),
   "url": postUrl,
+  "author": { "@type": "Person", "name": "Pavel Savinov", "url": "https://getjump.me/about" },
   "mainEntityOfPage": {
     "@type": "WebPage",
     "@id": postUrl,
@@ -35,7 +36,7 @@ const jsonLd = {
 };
 ---
 
-<Layout title={`${post.data.title}`} description={post.data.description} ogType="article">
+<Layout title={`${post.data.title}`} description={post.data.description} ogType="article" ogImage={post.data.ogImage}>
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   <TableOfContents headings={headings} />
   {hasF1Phases && <F1Timeline />}
