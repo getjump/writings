@@ -104,7 +104,11 @@ const items = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
     display: none;
   }
 
-  @media (min-width: 1280px) {
+  /* The fixed sidebar only fits once the side gutter is wide enough to hold
+     it (180px wide, anchored 200px left of the 980px page column, plus a
+     ~24px safety margin). That needs ~1428px, so below 1440px we fall back to
+     the inline collapsible to avoid the sidebar overlapping the article. */
+  @media (min-width: 1440px) {
     .toc-desktop {
       display: block;
       left: max(1.5rem, calc((100vw - 980px) / 2 - 200px));
@@ -151,7 +155,7 @@ const items = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
     transform: rotate(45deg);
   }
 
-  @media (min-width: 1280px) {
+  @media (min-width: 1440px) {
     .toc-mobile {
       display: none;
     }
