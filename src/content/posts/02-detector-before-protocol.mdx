@@ -1,0 +1,196 @@
+---
+title: "I Built the Detector Before the Protocol. Then Two Agents Fought Over It."
+description: 'Adversarial development with Claude: a lab, a battery of ML classifiers as the referee, a zoo of every past detector, and five rounds of measurement mistakes that taught me more than the wins.'
+date: 2026-10-10
+---
+import Callout from '../../components/Callout.astro';
+import Collapsible from '../../components/Collapsible.astro';
+import TableEnhancements from '../../components/TableEnhancements.astro';
+
+<TableEnhancements />
+
+Over a few weeks this summer I built a network transport in Go together with Claude. The transport itself is not what this post is about. What I want to write down is the method, because it turned out to be more reusable than the code: **I built the adversary first**, gave it a number to report, and then let one agent try to break every build while another agent repaired what the first one found.
+
+This post is two stories woven together: how a fuzzy "should behave like a browser" requirement becomes a measurable experiment, and how a loop of attacking and repairing agents ran on top of it. I'm deliberately leaving out how the protocol works and what the classifiers actually keyed on. This is about the technique and about the measurement mistakes in it.
+
+<Callout type="info" title="TL;DR">
+- **What:** a lab that records the same seeded browser sessions twice — once through a reference browser, once through my transport — plus a battery of ML classifiers whose only job is to tell the two apart.
+- **Loop:** classifiers find a difference, an agent repairs it, the lab re-records, the classifiers retrain from scratch. Five full rounds in roughly 33 hours of wall-clock time.
+- **Headline number:** against a classifier with no labelled samples of my traffic, AUC moved from ~1.0 to ~0.44 (0.5 is a coin flip). Against a classifier trained on labelled samples it kept separating, and I treat that as an upper bound, not a failure.
+- **Biggest lesson:** my first "critical" result measured my own workload, not the protocol.
+- **Second lesson:** a green test suite and a fuzzer will both happily agree with a wrong premise.
+</Callout>
+
+<Callout type="insight" title="Key takeaways">
+- **Pick the adversary and the metric before you write the feature.** "Looks like normal traffic" is not testable. "No classifier in the battery beats 0.5 AUC on session-grouped splits" is.
+- **The detector finds the cheapest difference, and the cheapest difference is usually your test.** Byte-match the workloads before you believe any AUC.
+- **Keep every adversary.** A repair that only fools the newest feature set is not a repair — an older detector will still catch it.
+- **A negative claim is a statistical claim.** "Zero false positives" means nothing until you say how many negatives you looked at.
+- **Agents confirm their own mistakes faster than humans do.** Put something in the loop that can disagree with them.
+</Callout>
+
+## The idea: borrow the distinguisher from cryptography
+
+You cannot test "looks like a browser." You can compare one handshake byte for byte, but traffic has hundreds of observable properties — packet sizes, directions, bursts, timing, how connections open and close, how many there are per page. Matching the ones you thought of says nothing about the ones you didn't.
+
+Cryptography settled this kind of problem decades ago, and the framing is the genuinely reusable part of this project. You don't define a secure cipher by listing the attacks it resists. You define a **game**: an adversary is handed samples from one of two sources and has to say which, and the scheme is good if no efficient adversary does meaningfully better than guessing. The quantity being bounded is the adversary's **advantage**:
+
+$$\mathrm{Adv}(D) = \left|\, \Pr[D(X)=1] - \Pr[D(Y)=1] \,\right|$$
+
+where $X$ is browser traffic, $Y$ is my traffic, and $D$ is the distinguisher.
+
+The textbook version quantifies over *all* efficient adversaries, which you obviously can't run. The engineering version picks a concrete, diverse set of them, trains each as well as you can, and reports their advantage with confidence intervals. For a scoring classifier the natural advantage metric is AUC — the probability that a random sample of my traffic looks more suspicious than a random sample of browser traffic. **0.5 means no advantage. 1.0 means a perfect distinguisher.**
+
+That single move turns a vibe into an experiment, and every protocol change into a hypothesis with a number attached.
+
+### Two observers, two numbers
+
+There are two very different distinguishers, and they produce different numbers. Not keeping them apart is the fastest way to lie to yourself.
+
+- **A label-free observer** builds a model of "normal browser traffic" and flags whatever doesn't fit. It has never seen a labelled example of my traffic. This is the realistic adversary — what someone can deploy before they even know the transport exists.
+- **A supervised observer** has labelled captures of both classes and trains directly on the difference. This is the strongest adversary the lab can build. It is what the attack rounds use, because it hands the developer the most information: not just *whether* the classes differ, but *where*.
+
+The supervised battery is the training signal. The label-free observer is the headline number. More on why both matter later.
+
+## What I built
+
+Three parts: a **reference**, a **candidate**, and a **judge**.
+
+```d2
+direction: right
+
+scenario: "Seeded scenario\n(sizes, pauses)"
+browser: "Reference browser"
+transport: "Browser via my transport"
+capture: "Capture both sides\n+ browser netlog"
+flows: "Flows + features"
+battery: "Detector battery"
+report: "Report + findings ledger"
+
+scenario -> browser
+scenario -> transport
+browser -> capture
+transport -> capture
+capture -> flows -> battery -> report
+```
+
+**Scripted browser sessions.** A scenario is a small JSON plan: navigate to this resource, wait, navigate to the next, idle. Sizes and pauses are drawn from a fixed seed, so the reference and the candidate run *the same* session. A browser runner executes the plan and records the browser's own network log alongside packet captures on both the client and the server side.
+
+**Everything is hashed.** Each session bundle carries a manifest with the SHA-256 of every tool that produced it — the browser binary, the capture tool, the runner. Each corpus gets a hash, the transport build gets a hash, and every trained detector records which corpus and which build it saw. A verifier refuses a bundle if any hash is off. This sounds like overkill for a personal project until the third time you wonder which build a number came from.
+
+**Capture hygiene.** NIC offloads (TSO/GSO/GRO) merge packets into super-MTU frames and erase exactly the inter-arrival timing you are trying to measure. They're off, and all logs share one clock. Across the pilots the sessions add up to about 4.5 GB: 240 sessions and 360 flows per round.
+
+### The judge
+
+The detector battery is intentionally boring and diverse:
+
+- gradient-boosted trees on flow-level features,
+- gradient-boosted trees on "shape only" features with volumes removed,
+- the same trees restricted to the first 20 and first 100 packets, because that is what an on-path observer sees early,
+- a small 1D-CNN over the packet sequence,
+- later: classifiers for packet "trains", for connection teardown, and an aggregator across all connections of one session.
+
+Every number in a report is a **TPR at FPR ≤ 0.1%** with a Wilson interval, plus **AUC with a bootstrap interval that resamples capture sessions, not flows**, and cross-validation grouped by session. Flows from the same session share almost everything; splitting them randomly leaks the answer and flatters the detector. Each report opens with a "methodology caveats, read before the numbers" section. The one that matters most:
+
+<Callout type="warning" title="The rule of three">
+With zero false positives in 120 negative flows, the one-sided 95% upper bound on the false-positive rate is about 3/120 = 2.5%. To honestly claim 0.1% you need roughly 3,000 independent negatives. "We saw no false positives" is a statement about the sample size, not about the detector.
+</Callout>
+
+## Pilot 1: the loudest result was wrong
+
+The first pilot came back with every detector at TPR ≈ 0.98–1.0 and AUC ≈ 0.99–1.0. Severity: critical. Ten findings.
+
+It took one table to see what I'd done. In that round my transport sessions grew to about a megabyte each, while the browser scenario fetched a ~13 KB page. Of course a classifier can tell a 1 MB session from a 13 KB one. Volume features separated the classes trivially, and even ratio features were being quietly levered by the volume gap. The one thing that did *not* separate was the static first-flight sizes — a hint I should have read earlier.
+
+Round two fixed the cause, not the symptom: both classes now fetch the *same* seeded sizes with the *same* seeded idles, so per-session volume is matched. The result was still all-critical. But now the separation was real, and the analysis could split every top feature three ways:
+
+- **genuine** — the protocol really behaves differently,
+- **rig artifact** — loopback has near-zero RTT, which sharpens every timing and ordering feature; my path has one extra user-space hop the browser doesn't,
+- **workload asymmetry** — my sessions do one exchange the browser's scenario doesn't.
+
+That three-way table may be the most valuable artifact the lab produced. A detector tells you *that* two things differ, never whether the difference would matter on a real network. You have to argue that part yourself, in writing, per feature.
+
+## The loop: two agents and a referee
+
+After round two, the loop looked like this:
+
+```d2
+direction: right
+
+red: "RED agent\n(lab + detectors)"
+findings: "Findings ledger\n(id, severity, status)"
+dev: "DEV agent\n(changes transport)"
+human: "Me\n(arbiter)"
+
+red -> findings: "appends"
+findings -> dev: "reads"
+dev -> red: "new build"
+findings -> human: "I decide what's\nworth trying"
+human -> dev
+```
+
+1. **RED** (an agent with the lab and the detector code) records a fresh corpus on the current build, retrains every detector from scratch, writes the report, and appends **findings** to a ledger: schema-validated JSON with id, severity, status, evidence, and whether it blocks release.
+2. **DEV** (a separate agent session with the code) takes the findings, changes the transport, and runs the full test suite.
+3. I read both and decide what is worth trying, what is a rig artifact, and what to stop doing.
+
+The ledger grew from 10 findings in pilot 1 to 28 in pilot 5. Some got fixed, some got narrowed. Stale findings were deleted or rewritten, because a finding that is no longer true is worse than no finding: people optimise against it.
+
+I want to be precise about the word "autonomous", because it's the fashionable claim and it would be false here. There is no orchestrator process. RED and DEV are Claude Code sessions with their own context, and I am the scheduler and the referee. The reusable artifact is not an autonomous system; it is a **role split with a disagreeing referee between the roles**. The referee is a battery of ML models, not a human who gets tired and agrees with the last confident paragraph.
+
+## The detector zoo
+
+The idea I'm happiest with is small: **never throw away a detector.**
+
+Every round, the trained models are archived with a manifest naming their corpus and build. The next round replays *every historical generation* against the new corpus and prints one table. It is a regression suite for the adversary. If a repair only fooled the newest feature set, an older detector still catches the build.
+
+This is what stops the oldest failure mode in adversarial setups: the two sides chasing each other in a circle, each "win" just moving the signal somewhere the current opponent can't see. In pilot 5 an older sequence-level detector kept separating a build that newer ones had stopped flagging on some features. The converse held too: pilot-1 detectors, trained on the volume confound, generalised badly — which is exactly what a confounded model should do.
+
+Pilot 5 also showed something less comfortable. One change in the repair iteration made the picture on one carrier **worse** — every detector went back to a perfect score. The change had cured the symptom one detector was using and sharpened a different one. The report said "worse", the ledger said "open", and the next round tried another approach. Nobody had to pretend the previous round worked. That is what a ledger plus a replay is *for*.
+
+RED also caught a bug in the DEV iteration itself: a double-close that panicked on a shutdown path and made one test fail about two runs in three. Not a classifier finding — just what happens when you re-run the full suite every round instead of trusting that last week's green is still green.
+
+## What an AUC of 0.44 means, and what it doesn't
+
+The number I'll put a name to: against a classifier a realistic observer could build **without any labelled samples of my traffic**, my transport scored an AUC of about **0.44** against the reference browser, where 0.5 is chance. That number comes from a separate rig with realistic packet sizes and injected loss and delay, not from the loopback pilots. And the route from ~1.0 to 0.44 was not clever shaping on the wire — the biggest single swing came from a configuration choice in *how the workload was driven*. The cheapest lever was in the setup, not the codec.
+
+What I can't claim: against a classifier *trained on labelled samples*, the picture is different, and in the pilot rounds — which are exactly that kind of supervised test — nothing ever dropped to chance on every detector at once. I treat the supervised result as an upper bound on separability, a property any proxy shares, rather than a failing grade.
+
+It is also lab-only: one day, one rig, one browser build, no network I didn't control, and loopback timings kinder to a detector than any real network. The reports say all of this, in the first section, every time.
+
+<Callout type="insight">
+Two different questions produce two different numbers. A write-up that reports only the flattering one isn't wrong — it's lying by omission. The whole point of fixing the adversary and the metric in advance is that you don't get to choose afterward which number to show.
+</Callout>
+
+## The tests that certified the bug
+
+While the loop ran, the agents were writing a lot of Go, and the part of the history I find most useful as an engineer is what the audit commits found in my *own tests*.
+
+- A reassembler sized its ceiling against the worst-case header encoding, but nothing obliges a peer to use the longest encoding. A peer sending tightly encoded fragments could push a payload past the ceiling and end the whole flow instead of dropping one datagram. The unit tests only ever fed the reassembler output from its own encoder. A fuzz target found it in three seconds.
+- A test fixture sent each accepted session into a 64-slot channel *before* starting its echo goroutine. The 65th session hung its client forever. Every stress test written against that fixture was **silently capped at 64 sessions**, and the failure looked exactly like the deadlock I was hunting.
+- Three stress tests had been switched off with a skip message advertising a "known deadlock". The deadlock was fixed. With the gate lifted they passed 15 times in a row under a concurrent fuzzing campaign. A stress test that reproduces a fixed bug *is* its regression test; one that never runs is nothing, and a skip message still advertising the bug is worse than silence.
+- Per-package coverage said 98.6% for the package I was proudest of. Measured across packages it was 78.1% of statements, with 16 non-generated functions never executed. One was dead code on a data path.
+
+The best story, because it is about agents, goes like this. A property test asserted "no encoder emits more than the maximum payload". It failed on its first input. The failure was read as a defect, and three encoders were "fixed". The assertion was then generalised into a fuzz target, which promptly "found" the same thing in two more encoders. All of it was wrong: the constant bounds the *caller's* payload, and the header is budgeted separately, one file away, in a comment. The audit had even claimed an existing test "certified" the bug. That claim was retracted too.
+
+The commit that reverted it says the quiet part out loud: generated input doesn't find bugs, it finds *disagreements between the code and the contract written into the test*, quickly, and in whichever direction the contract is wrong. The speed that makes fuzzing valuable also multiplies a wrong premise. The check that would have caught it instantly was reading what the constant *means* before asserting what it bounds.
+
+Agents are very good at this particular failure. They read a red test as evidence against the code, because that's the usual direction. When the premise is mine, written fast, and the agent has no reason to doubt it, it will build a lot of confident work on top of it. What helped: a retraction goes into the commit message and the docs instead of being quietly edited away, and the loop always contains something that can disagree with the agent — a fuzzer, a detector, a coverage report, me.
+
+<Collapsible title="The testing campaign in numbers">
+
+- 14 fuzz targets, 10 minutes each in round one, no failures.
+- 11.2 million executions of "any profile the validator accepts must not break the engine", with the input *built* from fuzzer bytes because a random blob never gets past parsing.
+- A chaos wrapper under the transport: 3% loss, 2% duplication, up to 3 ms jitter. A reliable stream of ~53 KiB arrived byte-perfect; 57 of 60 datagrams arrived, none stitched together wrongly. The first version of that test read 13 of 60 — it was measuring the sender's queue, not the path.
+- A data race surfaced only under `-race` plus a concurrent stress test; four scheduler-dependent assertions were fixed alongside it.
+
+</Collapsible>
+
+## What I'd tell someone starting this
+
+1. **Write the report template first**, caveats section included. It forces the questions — what is the unit of independence? what is the statistical power? — before you have a number to fall in love with.
+2. **Make the lab deterministic and hashed on day one.** Reproducibility is cheap at the start and impossible to retrofit.
+3. **Treat every "critical" as a hypothesis about your harness** until workload, rig, and sample size are argued.
+4. **Archive every adversary.** One extra table, most of the value.
+5. **Give the agents a referee** — a coverage report, a fuzzer, a detector, and a human who reads the contract.
+
+I'm not publishing the transport or its measurements in detail. Methodology helps everyone who reads it; the specific values help only one side of a distinguishing game. I'd rather give away the first. More posts will follow on the lab itself, the statistics behind a detector that has to be able to say "no", and how the agent loop ran day to day.
