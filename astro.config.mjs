@@ -5,6 +5,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { remarkMermaid } from "./src/plugins/remark-mermaid.mjs";
 import { remarkD2 } from "./src/plugins/remark-d2.mjs";
+import { rehypeTableScroll } from "./src/plugins/rehype-table-scroll.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 
 const postsDir = new URL("./src/content/posts/", import.meta.url);
@@ -40,7 +41,7 @@ export default defineConfig({
       },
     },
     remarkPlugins: [remarkMath, remarkD2, remarkMermaid],
-    rehypePlugins: [rehypeKatex],
+    rehypePlugins: [rehypeKatex, rehypeTableScroll],
   },
   image: {
     service: { entrypoint: "astro/assets/services/noop" },

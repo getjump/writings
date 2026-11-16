@@ -4,20 +4,11 @@
    ============================================ */
 
 @font-face {
-  font-family: "Newsreader Fallback";
-  src: local("Georgia");
-  size-adjust: 95.54%;
-  ascent-override: 76.93%;
-  descent-override: 27.74%;
-  line-gap-override: 0%;
-}
-
-@font-face {
-  font-family: "Inter Fallback";
+  font-family: "IBM Plex Sans Fallback";
   src: local("Arial"), local("ArialMT");
-  size-adjust: 107.16%;
-  ascent-override: 90.42%;
-  descent-override: 22.49%;
+  size-adjust: 100.92%;
+  ascent-override: 101.57%;
+  descent-override: 27.25%;
   line-gap-override: 0%;
 }
 
@@ -46,10 +37,12 @@
 
 :root {
   color-scheme: light;
-  --font-body: "Newsreader Variable", "Newsreader Fallback", Georgia, "Times New Roman", serif;
-  --font-heading: "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  --font-mono: "JetBrains Mono Variable", "Fira Code", Consolas, monospace;
+  --font-body: "IBM Plex Sans Variable", "IBM Plex Sans Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-heading: var(--font-body);
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --stretch-display: 85%;
 
+  --measure: 36rem;
   --width-content: 920px;
   --width-page: 980px;
 

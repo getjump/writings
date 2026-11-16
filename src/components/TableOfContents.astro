@@ -118,7 +118,8 @@ const items = headings.filter((h) => h.depth >= 2 && h.depth <= 3);
   /* Mobile collapsible */
   .toc-mobile {
     display: block;
-    margin-bottom: var(--space-lg);
+    max-width: var(--measure);
+    margin: 0 auto var(--space-lg);
     border-left: 2px solid var(--color-border);
     padding-left: var(--space-md);
   }

@@ -37,26 +37,30 @@ const { title, date, updated, description, minutes } = Astro.props;
   }
 
   .article-header {
+    max-width: var(--measure);
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-lg);
     border-bottom: 1px solid var(--color-border);
   }
 
   .article-header :global(.heading-h1) {
-    font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem);
-    line-height: 1.12;
-    letter-spacing: -0.03em;
-    max-width: 24ch;
+    font-size: clamp(2.3rem, 1.3rem + 3.2vw, 3.5rem);
+    font-stretch: var(--stretch-display);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    max-width: 17ch;
     text-wrap: balance;
   }
 
   .article-dek {
     font-family: var(--font-body);
-    font-size: 1.1875rem;
-    line-height: 1.55;
+    font-size: 1.2rem;
+    line-height: 1.45;
     color: var(--color-text-secondary);
-    max-width: 62ch;
-    margin-top: var(--space-md);
+    margin-top: 1.25rem;
     text-wrap: pretty;
   }
 

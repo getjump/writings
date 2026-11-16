@@ -2,12 +2,12 @@
 import Nav from "./Nav.astro";
 import Footer from "./Footer.astro";
 import { profile } from "../lib/profile";
-import "@fontsource-variable/inter/wght.css";
-import "@fontsource-variable/newsreader/wght.css";
-import "@fontsource-variable/newsreader/wght-italic.css";
-import "@fontsource-variable/jetbrains-mono/wght.css";
-import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
-import newsreaderLatin from "@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url";
+import "@fontsource-variable/ibm-plex-sans/standard.css";
+import "@fontsource-variable/ibm-plex-sans/standard-italic.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "@fontsource/ibm-plex-mono/600.css";
+import plexLatin from "@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-standard-normal.woff2?url";
 import "../styles/global.css";
 
 interface Props {
@@ -119,8 +119,7 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="application/rss+xml" title="Pavel Savinov - writing" href="/rss.xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <link rel="preload" href={newsreaderLatin} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={plexLatin} as="font" type="font/woff2" crossorigin />
   </head>
   <body>
     <div class="page">
