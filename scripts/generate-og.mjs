@@ -20,15 +20,10 @@ function frontmatter(file) {
   return data;
 }
 
-const fontsDir = join(root, "node_modules", "@fontsource-variable");
-const fontFace = (family, file) => {
-  const data = readFileSync(join(fontsDir, file)).toString("base64");
-  return `@font-face { font-family: "${family}"; font-weight: 100 900; src: url(data:font/woff2;base64,${data}) format("woff2"); }`;
-};
-const fonts = [
-  fontFace("Inter Variable", "inter/files/inter-latin-wght-normal.woff2"),
-  fontFace("Newsreader Variable", "newsreader/files/newsreader-latin-wght-normal.woff2"),
-].join("\n");
+const plex = readFileSync(
+  join(root, "node_modules", "@fontsource-variable", "ibm-plex-sans", "files", "ibm-plex-sans-latin-standard-normal.woff2"),
+).toString("base64");
+const fonts = `@font-face { font-family: "IBM Plex Sans Variable"; font-weight: 100 700; font-stretch: 75% 100%; src: url(data:font/woff2;base64,${plex}) format("woff2"); }`;
 
 const escape = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -44,11 +39,11 @@ function html({ title, footer }) {
 <style>
   ${fonts}
   * { margin: 0; box-sizing: border-box; }
-  body { width: 1200px; height: 630px; background: #fafaf9; color: #1a1a1a; position: relative; overflow: hidden; }
+  body { width: 1200px; height: 630px; background: #fafaf9; color: #1a1a1a; position: relative; overflow: hidden; font-family: "IBM Plex Sans Variable", sans-serif; }
   .card { position: absolute; inset: 64px 80px 56px; display: flex; flex-direction: column; }
-  .brand { display: flex; align-items: center; gap: 16px; font: 600 28px "Inter Variable", sans-serif; letter-spacing: -0.015em; }
-  .title { font-family: "Newsreader Variable", serif; font-weight: 500; letter-spacing: -0.02em; line-height: 1.08; margin-top: auto; margin-bottom: auto; max-width: 940px; text-wrap: balance; }
-  .foot { display: flex; justify-content: space-between; border-top: 2px solid #1a1a1a; padding-top: 20px; font: 500 24px "Inter Variable", sans-serif; color: #555; }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 28px; font-weight: 600; }
+  .title { font-weight: 700; font-stretch: 85%; letter-spacing: -0.01em; line-height: 1; margin-top: auto; margin-bottom: auto; max-width: 940px; text-wrap: balance; }
+  .foot { display: flex; justify-content: space-between; border-top: 3px solid #1a1a1a; padding-top: 20px; font-size: 24px; font-weight: 500; color: #555; }
   .arc { position: absolute; right: -150px; top: -170px; opacity: .07; }
 </style></head><body>
   <div class="arc">${mark(620, "#1a1a1a", "#1a1a1a")}</div>
