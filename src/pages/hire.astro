@@ -1,0 +1,179 @@
+---
+import Layout from "../components/Layout.astro";
+import Heading from "../components/Heading.astro";
+import Prose from "../components/Prose.astro";
+import StructuredData from "../components/StructuredData.astro";
+import { availability, formatDate, person, personId, profile } from "../lib/profile";
+import { getCollection } from "astro:content";
+
+const posts = (await getCollection("posts")).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+const profilePage = {
+  "@type": "ProfilePage",
+  "@id": profile.basics.url,
+  url: profile.basics.url,
+  name: `${profile.basics.name} - ${profile.basics.label}`,
+  mainEntity: { "@id": personId },
+};
+---
+
+<Layout
+  title="Pavel Savinov - Senior Go Backend Engineer in Belgrade"
+  description={`${profile.basics.summary} ${availability}`}
+>
+  <StructuredData slot="head" nodes={[person, profilePage]} />
+  <link slot="head" rel="alternate" type="application/json" href="/cv.json" title="Pavel Savinov - public CV" />
+  <section class="hire">
+    <header class="profile-header" id="person">
+      <Heading as="h1">{profile.basics.name}</Heading>
+      <p class="role">{profile.basics.label}</p>
+      <p class="summary">{profile.basics.summary}</p>
+      <p class="availability">{availability}</p>
+      <ul class="contact-links" aria-label="Contact and CV">
+        <li><a href={`mailto:${profile.basics.email}`}>{profile.basics.email}</a></li>
+        <li><a href="/cv.pdf">CV (PDF)</a></li>
+        {profile.basics.profiles.map((entry) => <li><a href={entry.url}>{entry.network}</a></li>)}
+      </ul>
+    </header>
+
+    <Prose>
+      <h2 id="experience">Production experience</h2>
+      {profile.work.map((role) => (
+        <section class="work-entry">
+          <h3>{role.name}</h3>
+          <p class="work-meta">
+            {role.position}<br />
+            <time datetime={role.startDate}>{formatDate(role.startDate)}</time>
+            {" - "}
+            <time datetime={role.endDate}>{formatDate(role.endDate)}</time>
+          </p>
+          <p>{role.summary}</p>
+          {role.highlights.length > 0 && <ul>{role.highlights.map((highlight) => <li>{highlight}</li>)}</ul>}
+        </section>
+      ))}
+
+      <h2 id="skills">Skills</h2>
+      <dl class="skill-list">
+        {profile.skills.map((skill) => (
+          <div>
+            <dt>{skill.name}</dt>
+            <dd>{skill.keywords.join(", ")}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <h2 id="public-work">Public projects</h2>
+      <p>Personal projects and open-source work, separate from my production experience.</p>
+      <ul>
+        {profile.projects.map((project) => (
+          <li><a href={project.url}>{project.name}</a> - {project.description}</li>
+        ))}
+      </ul>
+
+      <h2 id="writing">Engineering writing</h2>
+      <ul class="writing-list">
+        {posts.map((post) => (
+          <li>
+            <a href={`/posts/${post.id}/`}>{post.data.title}</a>
+            <p>{post.data.description}</p>
+            <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date.toISOString().slice(0, 7))}</time>
+          </li>
+        ))}
+      </ul>
+
+      <h2 id="education">Education and languages</h2>
+      <ul>
+        {profile.education.map((entry) => (
+          <li>{entry.studyType}, {entry.area}, {entry.institution}, {entry.startDate}-{entry.endDate}.</li>
+        ))}
+      </ul>
+      <p>{profile.languages.map((entry) => `${entry.language}: ${entry.fluency}`).join(". ")}.</p>
+
+      <h2 id="contact">Let's talk</h2>
+      <p>
+        Working on Go backends, search infrastructure or reliable event-driven systems?
+        <a href={`mailto:${profile.basics.email}`}>Email me</a> with the role or the problem you're working on.
+      </p>
+      <p class="profile-resources">
+        <a href="/cv.pdf">CV (PDF)</a>{" / "}<a href="/cv.json">CV (JSON)</a>.
+        Profile updated <time datetime={profile.meta.lastModified}>{new Date(`${profile.meta.lastModified}T00:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}</time>.
+      </p>
+    </Prose>
+  </section>
+</Layout>
+
+<style>
+  .hire {
+    max-width: 760px;
+  }
+
+  .profile-header {
+    margin-bottom: var(--space-xl);
+  }
+
+  .role {
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+  }
+
+  .summary {
+    font-size: 1.125rem;
+    line-height: 1.65;
+    max-width: 65ch;
+    margin-bottom: var(--space-md);
+  }
+
+  .availability {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+  }
+
+  .contact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+    list-style: none;
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+  }
+
+  .work-entry :global(.work-meta) {
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+  }
+
+  .skill-list > div {
+    margin-bottom: var(--space-md);
+  }
+
+  .skill-list dt {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .skill-list dd {
+    margin-top: var(--space-xs);
+  }
+
+  .writing-list li {
+    margin-bottom: var(--space-lg);
+  }
+
+  .writing-list li p {
+    margin: var(--space-xs) 0;
+    color: var(--color-text-secondary);
+  }
+
+  .writing-list time,
+  .profile-resources {
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+  }
+</style>

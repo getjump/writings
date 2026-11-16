@@ -1,100 +1,162 @@
 ---
 import Layout from "../components/Layout.astro";
-import Heading from "../components/Heading.astro";
+import StructuredData from "../components/StructuredData.astro";
+import { person, personId, profile } from "../lib/profile";
+import { formatDate, postPath, readingMinutes, sortByDate } from "../lib/posts";
 import { getCollection } from "astro:content";
 
-const posts = (await getCollection("posts")).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
-);
+const posts = sortByDate(await getCollection("posts"));
+const blogId = new URL("/#blog", Astro.site).href;
 ---
 
-<Layout title="Blog">
-  <section class="home">
-    <header class="home-header">
-      <Heading as="h1">Blog</Heading>
-      <p class="home-tagline">Writing about systems, design, and building with restraint.</p>
-    </header>
+<Layout
+  title="Pavel Savinov - Go, distributed systems and AI-agent tooling"
+  description="Notes by Pavel Savinov, a senior Go backend engineer in Belgrade: distributed systems, testing, security write-ups and building with AI agents."
+>
+  <StructuredData slot="head" nodes={[person, {
+    "@type": "Blog",
+    "@id": blogId,
+    url: Astro.site!.href,
+    name: "Pavel Savinov's engineering blog",
+    inLanguage: "en",
+    author: { "@id": personId },
+    blogPost: posts.map((post) => ({
+      "@type": "BlogPosting",
+      "@id": `${new URL(postPath(post), Astro.site).href}#article`,
+      headline: post.data.title,
+      url: new URL(postPath(post), Astro.site).href,
+      datePublished: post.data.date.toISOString(),
+    })),
+  }]} />
+
+  <section class="intro">
+    <h1 class="intro-title">Notes on distributed systems, testing and building with AI agents</h1>
+    <p class="intro-text">
+      I'm <a href="/hire/" rel="author">{profile.basics.name}</a>, a senior backend engineer in
+      Belgrade with four years of production Go at Aviasales, Uzum and Avito. I write up what I
+      measured, broke or took apart, with the data. Open to remote backend roles.
+    </p>
+  </section>
+
+  <section class="writing" aria-labelledby="writing-heading">
+    <h2 id="writing-heading" class="section-title">Writing</h2>
     <ul class="post-list">
-      {
-        posts.map((post) => {
-          const formattedDate = post.data.date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-          return (
-            <li class="post-item">
-              <a href={`/posts/${post.id}`}>
-                <span class="post-title">{post.data.title}</span>
-                <span class="post-description">{post.data.description}</span>
-                <time datetime={post.data.date.toISOString()}>{formattedDate}</time>
-              </a>
-            </li>
-          );
-        })
-      }
+      {posts.map((post) => (
+        <li class="post-item">
+          <time class="post-date" datetime={post.data.date.toISOString()}>{formatDate(post.data.date, "short")}</time>
+          <div class="post-body">
+            <h3 class="post-title"><a href={postPath(post)}>{post.data.title}</a></h3>
+            <p class="post-description">{post.data.description}</p>
+            <p class="post-meta">{readingMinutes(post)} min read</p>
+          </div>
+        </li>
+      ))}
     </ul>
   </section>
 </Layout>
 
 <style>
-  .home-header {
+  .intro {
     margin-bottom: var(--space-2xl);
   }
 
-  .home-tagline {
+  .intro-title {
     font-family: var(--font-body);
-    font-size: 1rem;
+    font-weight: 500;
+    font-size: clamp(2rem, 1.3rem + 3vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    max-width: 19ch;
+    text-wrap: balance;
+  }
+
+  .intro-text {
+    font-family: var(--font-body);
+    font-size: 1.125rem;
+    line-height: 1.65;
     color: var(--color-text-secondary);
-    margin-top: var(--space-sm);
+    max-width: 58ch;
+    margin-top: var(--space-lg);
+  }
+
+  .intro-text a {
+    color: var(--color-text);
+    text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+
+  .section-title {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--color-text);
   }
 
   .post-list {
     list-style: none;
-    padding: 0;
   }
 
   .post-item {
+    position: relative;
+    display: grid;
+    gap: var(--space-xs) var(--space-lg);
+    padding: var(--space-lg) 0;
     border-bottom: 1px solid var(--color-border);
   }
 
-  .post-item:first-child {
-    border-top: 1px solid var(--color-border);
+  @media (min-width: 720px) {
+    .post-item {
+      grid-template-columns: 7.5rem 1fr;
+    }
   }
 
-  .post-item a {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-    padding: var(--space-lg) 0;
-    text-decoration: none;
-    color: var(--color-text);
-  }
-
-  .post-item a:hover .post-title {
-    color: var(--color-text-secondary);
+  .post-date {
+    font-family: var(--font-heading);
+    font-size: 0.8125rem;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+    padding-top: 0.2rem;
   }
 
   .post-title {
     font-family: var(--font-heading);
-    font-size: 1.125rem;
+    font-size: 1.1875rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     line-height: 1.3;
-    transition: color 0.15s ease;
+    text-wrap: balance;
+  }
+
+  .post-title a {
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .post-title a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .post-item:hover .post-title a {
+    color: var(--color-accent);
   }
 
   .post-description {
     font-family: var(--font-body);
-    font-size: 0.9375rem;
+    font-size: 1rem;
+    line-height: 1.55;
     color: var(--color-text-secondary);
-    line-height: 1.5;
+    margin-top: var(--space-xs);
+    max-width: 66ch;
   }
 
-  .post-item time {
+  .post-meta {
     font-family: var(--font-heading);
     font-size: 0.75rem;
     color: var(--color-text-tertiary);
-    margin-top: var(--space-xs);
+    margin-top: var(--space-sm);
   }
 </style>

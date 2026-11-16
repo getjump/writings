@@ -1,0 +1,144 @@
+{
+  "basics": {
+    "name": "Pavel Savinov",
+    "label": "Senior Backend Engineer (Go)",
+    "email": "contact@getjump.me",
+    "url": "https://getjump.me/hire/",
+    "summary": "I build production Go services: search-results APIs, asynchronous logistics workflows and promotion systems. My work at Aviasales, Uzum and Avito spans performance profiling, PostgreSQL data modelling, Kafka, transactional outbox, SLOs and incident response.",
+    "location": {
+      "city": "Belgrade",
+      "countryCode": "RS"
+    },
+    "profiles": [
+      {
+        "network": "GitHub",
+        "username": "getjump",
+        "url": "https://github.com/getjump"
+      },
+      {
+        "network": "LinkedIn",
+        "username": "getjump",
+        "url": "https://www.linkedin.com/in/getjump"
+      }
+    ]
+  },
+  "work": [
+    {
+      "name": "Uzum Market (Uzum Technologies)",
+      "position": "Senior Go Engineer",
+      "startDate": "2026-04",
+      "endDate": "2026-09",
+      "summary": "Backend for the marketplace's parcel-sorting warehouses. Go, PostgreSQL and asynchronous workflows over Kafka.",
+      "highlights": [
+        "Took phase 2 of the sorting-center program from PRD to production in 4 months: domain and PostgreSQL data model, Kafka integration via transactional outbox, and most of the service implementation. Live at the first sorting center; rollout to approximately 10 centers was planned.",
+        "Designed per-item routing over a graph of sorting walls and cells, with topology checks and load balancing across duplicate walls.",
+        "Encoded sorting rules as domain invariants in a dedicated stage-transition module and defined SLOs for core operations."
+      ]
+    },
+    {
+      "name": "Aviasales",
+      "position": "Backend Engineer (Go)",
+      "startDate": "2024-03",
+      "endDate": "2026-04",
+      "summary": "Search-results API for a flight-search platform.",
+      "highlights": [
+        "Improved search-results API latency through pprof-driven profiling, caching and request shaping.",
+        "Freed approximately 1 GB of RAM per instance (approximately 30%) across hundreds of instances by fixing memory leaks and retuning caches.",
+        "Designed and shipped config-driven badges with the expr expression language. Moved badge logic from iOS, Android and web clients to the backend; rollout went from a sprint plus mobile releases to a 30-minute config change.",
+        "Wrote a search-results storage design from access-pattern analysis and load projections across three data centers. It started the redesign; the Search team implemented its own version."
+      ]
+    },
+    {
+      "name": "Avito",
+      "position": "Backend Engineer",
+      "startDate": "2022-08",
+      "endDate": "2023-12",
+      "summary": "Paid promotions and Billing integration. Go and PHP.",
+      "highlights": [
+        "Owned SLOs, alerting, tail-latency and timeout fixes across 20+ promotion microservices, keeping 99.9%+ availability at approximately 3.5k RPS.",
+        "Migrated a Redis cache serving approximately 3.5k RPS from a single instance to a sharded cluster with a phased rollout.",
+        "Designed a feature-flagged cutover from legacy promotions to a new architecture, with fail-safes and rollback; delivered Billing integration for a new paid feature."
+      ]
+    },
+    {
+      "name": "Far Eastern Federal University",
+      "position": "Assistant Lecturer",
+      "startDate": "2019-09",
+      "endDate": "2020-07",
+      "summary": "Taught Databases (PostgreSQL) and Web Programming to 50+ students.",
+      "highlights": []
+    }
+  ],
+  "education": [
+    {
+      "institution": "Far Eastern Federal University",
+      "area": "Applied Mathematics and Informatics",
+      "studyType": "Master's degree",
+      "startDate": "2017",
+      "endDate": "2019"
+    },
+    {
+      "institution": "Far Eastern Federal University",
+      "area": "Applied Mathematics and Informatics",
+      "studyType": "Bachelor's degree",
+      "startDate": "2013",
+      "endDate": "2017"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Backend engineering",
+      "keywords": ["Go (Golang)", "concurrency", "pprof", "SQL", "Python", "REST", "gRPC", "Protobuf"]
+    },
+    {
+      "name": "Data and distributed systems",
+      "keywords": ["PostgreSQL", "Kafka", "Redis Cluster", "transactional outbox", "idempotent consumers", "event-driven architecture"]
+    },
+    {
+      "name": "Reliability and delivery",
+      "keywords": ["SLOs and SLIs", "Prometheus", "Grafana", "Jaeger", "OpenTelemetry", "incident response", "Docker", "Kubernetes", "CI/CD"]
+    },
+    {
+      "name": "AI-agent tooling (personal projects)",
+      "keywords": ["Claude Code", "Codex", "MCP", "agent skills", "LLM APIs", "structured output"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "pr-review",
+      "description": "An agent skill that reviews a pull request by running it: three builds, one subtraction, then probes for behavior that tests do not cover.",
+      "url": "https://github.com/getjump/pr-review",
+      "type": "Personal, open source",
+      "keywords": ["AI agents", "code review", "testing"]
+    },
+    {
+      "name": "ProtonDB compatibility prediction",
+      "description": "A two-stage LightGBM classifier predicting Linux game compatibility from 350K+ community reports. Built with Claude Code as a research partner; per-game F1 of 0.871.",
+      "url": "https://github.com/getjump/protondb-game-compatibility-prediction",
+      "type": "Personal, open source",
+      "keywords": ["Python", "LightGBM", "structured output"]
+    },
+    {
+      "name": "Graph LLM Chat",
+      "description": "A local-first branching chat UI with streaming, token accounting, summarization at context limits and multi-server MCP integration.",
+      "url": "https://github.com/getjump/graph-llm-chat",
+      "type": "Personal, open source",
+      "keywords": ["TypeScript", "LLM", "MCP"]
+    },
+    {
+      "name": "PHP: The Right Way, Russian translation",
+      "description": "Russian translation of PHP: The Right Way, maintained by the community.",
+      "url": "https://github.com/getjump/ru-php-the-right-way",
+      "type": "Open-source translation",
+      "keywords": ["PHP", "documentation"]
+    }
+  ],
+  "languages": [
+    { "language": "English", "fluency": "C1" },
+    { "language": "Russian", "fluency": "Native" }
+  ],
+  "meta": {
+    "canonical": "https://getjump.me/cv.json",
+    "lastModified": "2026-10-12"
+  }
+}

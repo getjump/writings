@@ -59,14 +59,15 @@
   .prose :global(a) {
     color: var(--color-text);
     text-decoration: underline;
-    text-decoration-color: var(--color-border);
+    text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
-    transition: text-decoration-color 0.15s ease;
+    transition: color 0.15s ease, text-decoration-color 0.15s ease;
   }
 
   .prose :global(a:hover) {
-    text-decoration-color: var(--color-text);
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
   }
 
   .prose :global(blockquote) {

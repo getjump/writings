@@ -1,0 +1,76 @@
+---
+import Layout from "../components/Layout.astro";
+import { formatDate, postPath, sortByDate } from "../lib/posts";
+import { getCollection } from "astro:content";
+
+const posts = sortByDate(await getCollection("posts")).slice(0, 5);
+---
+
+<Layout title="Page not found - Pavel Savinov" description="This address has no page." noindex>
+  <section class="not-found">
+    <h1 class="title">This page doesn't exist</h1>
+    <p class="text">
+      The link may have a typo, or the page was moved. Try <a href="/search/">search</a> or one of
+      the recent posts below.
+    </p>
+    <ul class="list">
+      {posts.map((post) => (
+        <li>
+          <a href={postPath(post)}>{post.data.title}</a>
+          <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date, "short")}</time>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Layout>
+
+<style>
+  .title {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: clamp(1.75rem, 1.3rem + 2vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .text {
+    font-size: 1.0625rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-md);
+    max-width: 58ch;
+  }
+
+  .text a {
+    color: var(--color-text);
+  }
+
+  .list {
+    list-style: none;
+    margin-top: var(--space-xl);
+    border-top: 2px solid var(--color-text);
+  }
+
+  .list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .list a {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+
+  .list time {
+    flex: none;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+  }
+</style>

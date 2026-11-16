@@ -2,81 +2,53 @@
 import Layout from "../components/Layout.astro";
 import Heading from "../components/Heading.astro";
 import Prose from "../components/Prose.astro";
+import StructuredData from "../components/StructuredData.astro";
+import { availability, person, personId, profile } from "../lib/profile";
+import { postPath, sortByDate } from "../lib/posts";
+import { getCollection } from "astro:content";
+
+const posts = sortByDate(await getCollection("posts"));
 ---
 
 <Layout
-  title="About"
-  description="Pavel Savinov - senior backend engineer (Go) based in Belgrade. Four years of production Go at Avito, Aviasales and Uzum."
+  title="About Pavel Savinov - Go Backend Engineer"
+  description={profile.basics.summary}
 >
+  <StructuredData slot="head" nodes={[person, {
+    "@type": "AboutPage",
+    "@id": new URL(Astro.url.pathname, Astro.site).href,
+    mainEntity: { "@id": personId },
+  }]} />
   <section class="about">
     <Heading as="h1">About</Heading>
     <Prose>
       <p>
-        I'm Pavel Savinov, a senior backend engineer working in Go. I have four years of
-        production Go on high-volume distributed systems at Avito, Aviasales and Uzum:
-        classifieds, flight search and e-commerce logistics with 15-50M monthly users. I'm based
-        in Belgrade (CET) and open to remote roles, B2B contracts and relocation to the
-        Netherlands or Germany.
+        I'm {profile.basics.name}, a senior backend engineer working in Go.
+        {profile.basics.summary}
       </p>
-
-      <h2>Highlights</h2>
-      <ul>
-        <li>
-          Cut search API p99.9 latency from ~5 s to ~500 ms at Aviasales through pprof-driven
-          optimization, caching and request shaping.
-        </li>
-        <li>
-          Took a parcel-sorting system at Uzum from PRD to production in 4 months: domain and
-          PostgreSQL model, Kafka integration via transactional outbox.
-        </li>
-        <li>
-          Kept 20+ promotion microservices at 99.9%+ availability (~3.5k RPS) at Avito.
-        </li>
-        <li>
-          Moved badge logic from mobile and web clients to a config-driven backend: a rollout went
-          from a sprint plus app releases to a 30-minute config change.
-        </li>
-      </ul>
-
-      <h2>Stack</h2>
+      <p>{availability}</p>
       <p>
-        Go, PostgreSQL, Kafka, Redis, gRPC, Kubernetes, Prometheus, Grafana, Jaeger. I use Claude
-        Code and custom agent harnesses in daily work.
+        <a href="/hire/">Experience, skills and contact details</a>.
+        <a href="/cv.pdf">CV (PDF)</a>{" / "}<a href="/cv.json">CV (JSON)</a>.
       </p>
 
       <h2>Selected public work</h2>
       <ul>
-        <li>
-          <a href="https://github.com/getjump/pr-review">pr-review</a> - an agent skill that
-          reviews a pull request by running it: three builds, one subtraction, then probes for
-          what no test covers.
-        </li>
-        <li>
-          <a href="https://github.com/getjump/protondb-game-compatibility-prediction"
-            >protondb-game-compatibility-prediction</a
-          > - predicting Linux game compatibility from 350K+ community reports with a two-stage
-          LightGBM cascade, 0.871 F1.
-          <a href="/posts/01-protondb-compatibility-ml-x-claude">Write-up</a>.
-        </li>
-        <li>
-          <a href="https://github.com/getjump/ru-php-the-right-way">ru-php-the-right-way</a> -
-          Russian translation of PHP: The Right Way, maintained by the community.
-        </li>
+        {profile.projects.map((project) => (
+          <li><a href={project.url}>{project.name}</a> - {project.description}</li>
+        ))}
       </ul>
 
       <h2>Writing</h2>
-      <p>
-        Distributed systems, testing and building software with AI agents. Recent posts include
-        <a href="/posts/01-protondb-compatibility-ml-x-claude">I Don't Know ML. Claude Does.</a>
-        and
-        <a href="/posts/02-detector-before-protocol">I Built the Detector Before the Protocol. Then Two Agents Fought Over It.</a>
-      </p>
+      <p>Distributed systems, testing and building software with AI agents.</p>
+      <ul>
+        {posts.map((post) => <li><a href={postPath(post)}>{post.data.title}</a></li>)}
+      </ul>
 
       <h2>Contact</h2>
       <ul>
-        <li><a href="https://www.linkedin.com/in/getjump">LinkedIn</a></li>
-        <li><a href="https://github.com/getjump">GitHub</a></li>
-        <li><a href="mailto:getjump0@gmail.com">getjump0@gmail.com</a></li>
+        {profile.basics.profiles.map((entry) => <li><a href={entry.url}>{entry.network}</a></li>)}
+        <li><a href={`mailto:${profile.basics.email}`}>{profile.basics.email}</a></li>
       </ul>
     </Prose>
   </section>

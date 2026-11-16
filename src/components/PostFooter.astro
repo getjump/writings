@@ -1,0 +1,124 @@
+---
+import Mark from "./Mark.astro";
+import { formatDate, postPath, type Post } from "../lib/posts";
+
+interface Props {
+  others: Post[];
+}
+
+const { others } = Astro.props;
+---
+
+<aside class="post-footer" aria-label="About the author and more writing">
+  <div class="author">
+    <Mark size={36} />
+    <div>
+      <p class="author-name">Written by <a href="/hire/" rel="author">Pavel Savinov</a></p>
+      <p class="author-bio">
+        Senior backend engineer working in Go, based in Belgrade. I write about distributed systems,
+        testing, and building with AI agents. Open to remote backend roles:
+        <a href="/hire/">experience and contacts</a>, or follow new posts via <a href="/rss.xml">RSS</a>.
+      </p>
+    </div>
+  </div>
+
+  {others.length > 0 && (
+    <nav class="more" aria-labelledby="more-heading">
+      <h2 id="more-heading" class="more-heading">More writing</h2>
+      <ul>
+        {others.map((post) => (
+          <li>
+            <a href={postPath(post)}>{post.data.title}</a>
+            <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date, "short")}</time>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )}
+</aside>
+
+<style>
+  .post-footer {
+    max-width: var(--width-content);
+    margin-top: var(--space-2xl);
+    display: grid;
+    gap: var(--space-xl);
+  }
+
+  .author {
+    display: flex;
+    gap: var(--space-md);
+    align-items: flex-start;
+    padding: var(--space-lg) 0;
+    border-top: 2px solid var(--color-text);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .author :global(.mark) {
+    margin-top: 0.2rem;
+  }
+
+  .author-name {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .author-name a {
+    text-decoration: none;
+  }
+
+  .author-bio {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-xs);
+    max-width: 62ch;
+  }
+
+  .author-bio a {
+    color: var(--color-text);
+    text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    text-underline-offset: 3px;
+  }
+
+  .more-heading {
+    font-family: var(--font-heading);
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: var(--space-sm);
+  }
+
+  .more ul {
+    list-style: none;
+  }
+
+  .more li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .more a {
+    font-family: var(--font-heading);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+
+  .more time {
+    flex: none;
+    font-family: var(--font-heading);
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

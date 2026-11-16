@@ -3,7 +3,7 @@ import Layout from "../components/Layout.astro";
 import Heading from "../components/Heading.astro";
 ---
 
-<Layout title="Search" description="Search posts.">
+<Layout title="Search - Pavel Savinov" description="Search posts." noindex>
   <section class="search-page">
     <Heading as="h1">Search</Heading>
     <div class="search-input-wrap">
@@ -69,7 +69,7 @@ import Heading from "../components/Heading.astro";
       const li = document.createElement("li");
       li.className = "search-result-item";
       li.innerHTML = `
-        <a href="/posts/${entry.slug}">
+        <a href="/posts/${entry.slug}/">
           <span class="result-title">${entry.title}</span>
           <span class="result-description">${entry.description}</span>
           <time datetime="${entry.date}">${formatDate(entry.date)}</time>

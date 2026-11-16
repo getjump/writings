@@ -1,21 +1,52 @@
 ---
+import { profile } from "../lib/profile";
+
 const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
-  <p>&copy; {year} Pavel Savinov.</p>
+  <p>&copy; {year} <a href="/hire/" rel="author">{profile.basics.name}</a>, Belgrade.</p>
+  <ul class="footer-links">
+    {profile.basics.profiles.map((entry) => (
+      <li><a href={entry.url} rel="me">{entry.network}</a></li>
+    ))}
+    <li><a href={`mailto:${profile.basics.email}`}>Email</a></li>
+    <li><a href="/rss.xml">RSS</a></li>
+  </ul>
 </footer>
 
 <style>
   .footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-sm) var(--space-lg);
     margin-top: var(--space-2xl);
     padding: var(--space-lg) 0;
     border-top: 1px solid var(--color-border);
-  }
-
-  .footer p {
     font-family: var(--font-heading);
     font-size: 0.75rem;
     color: var(--color-text-tertiary);
+  }
+
+  .footer a {
+    color: var(--color-text-secondary);
+    text-decoration: none;
+  }
+
+  .footer p a {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    text-underline-offset: 2px;
+  }
+
+  .footer a:hover {
+    color: var(--color-accent);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: var(--space-md);
+    list-style: none;
   }
 </style>

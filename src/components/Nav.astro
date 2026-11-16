@@ -1,42 +1,66 @@
 ---
-const currentPath = Astro.url.pathname;
+import Mark from "./Mark.astro";
+
+const currentPath = Astro.url.pathname.replace(/\/?$/, "/");
+const links = [
+  { href: "/about/", label: "About" },
+  { href: "/hire/", label: "Hire me" },
+  { href: "/search/", label: "Search" },
+  { href: "/rss.xml", label: "RSS" },
+];
 ---
 
-<nav class="nav">
-  <a href="/" class="nav-brand">Blog</a>
-  <div class="nav-links">
-    <a href="/search" class:list={[{ active: currentPath === "/search" || currentPath === "/search/" }]}>Search</a>
-    <a href="/about" class:list={[{ active: currentPath === "/about" || currentPath === "/about/" }]}>About</a>
-    <a href="/rss.xml">RSS</a>
-  </div>
-</nav>
+<header class="nav">
+  <a href="/" class="nav-brand" aria-label="Pavel Savinov, home">
+    <Mark size={22} />
+    <span>Pavel Savinov</span>
+  </a>
+  <nav class="nav-links" aria-label="Main">
+    {links.map((link) => (
+      <a href={link.href} aria-current={currentPath === link.href ? "page" : undefined}>{link.label}</a>
+    ))}
+  </nav>
+</header>
 
 <style>
   .nav {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: center;
+    gap: var(--space-sm) var(--space-lg);
     padding: var(--space-lg) 0;
     border-bottom: 1px solid var(--color-border);
     margin-bottom: var(--space-2xl);
   }
 
   .nav-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
     font-family: var(--font-heading);
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     text-decoration: none;
     color: var(--color-text);
   }
 
   .nav-brand:hover {
-    color: var(--color-text-secondary);
+    color: var(--color-text);
+  }
+
+  .nav-brand :global(.mark) {
+    transition: transform 0.25s ease;
+  }
+
+  .nav-brand:hover :global(.mark) {
+    transform: translateY(-2px);
   }
 
   .nav-links {
     display: flex;
-    gap: var(--space-lg);
+    gap: var(--space-md) var(--space-lg);
   }
 
   .nav-links a {
@@ -44,10 +68,22 @@ const currentPath = Astro.url.pathname;
     font-size: 0.8125rem;
     color: var(--color-text-secondary);
     text-decoration: none;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid transparent;
   }
 
-  .nav-links a:hover,
-  .nav-links a.active {
+  .nav-links a:hover {
     color: var(--color-text);
+  }
+
+  .nav-links a[aria-current="page"] {
+    color: var(--color-text);
+    border-bottom-color: var(--color-accent);
+  }
+
+  @media (max-width: 480px) {
+    .nav-links {
+      gap: var(--space-md);
+    }
   }
 </style>

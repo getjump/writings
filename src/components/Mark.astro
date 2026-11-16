@@ -1,0 +1,33 @@
+---
+interface Props {
+  size?: number;
+  class?: string;
+}
+
+const { size = 22, class: className } = Astro.props;
+---
+
+<svg
+  class:list={["mark", className]}
+  width={size}
+  height={size}
+  viewBox="4 4 24 24"
+  aria-hidden="true"
+  focusable="false"
+>
+  <path d="M7.5 23C9.5 7.5 20 7.5 23.5 19.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+  <circle cx="7.5" cy="23.5" r="2.7" fill="currentColor" />
+  <circle cx="24" cy="23" r="3.7" class="mark-target" />
+</svg>
+
+<style>
+  .mark {
+    display: block;
+    flex: none;
+    color: var(--color-text);
+  }
+
+  .mark-target {
+    fill: var(--color-accent);
+  }
+</style>

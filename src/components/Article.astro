@@ -1,27 +1,29 @@
 ---
 import Heading from "./Heading.astro";
 import Prose from "./Prose.astro";
+import { profile } from "../lib/profile";
+import { formatDate } from "../lib/posts";
 
 interface Props {
   title: string;
   date: Date;
+  updated?: Date;
   description: string;
+  minutes?: number;
 }
 
-const { title, date, description } = Astro.props;
-
-const formattedDate = date.toLocaleDateString("en-US", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-});
+const { title, date, updated, description, minutes } = Astro.props;
 ---
 
 <article class="article">
   <header class="article-header">
     <Heading as="h1">{title}</Heading>
+    <p class="article-dek">{description}</p>
     <p class="article-meta">
-      <time datetime={date.toISOString()}>{formattedDate}</time>
+      <a href="/hire/" rel="author">{profile.basics.name}</a>
+      <time datetime={date.toISOString()}>{formatDate(date)}</time>
+      {updated && <span>Updated <time datetime={updated.toISOString()}>{formatDate(updated)}</time></span>}
+      {minutes && <span>{minutes} min read</span>}
     </p>
   </header>
   <Prose>
@@ -36,12 +38,46 @@ const formattedDate = date.toLocaleDateString("en-US", {
 
   .article-header {
     margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .article-header :global(.heading-h1) {
+    font-size: clamp(1.75rem, 1.2rem + 2.2vw, 2.5rem);
+    line-height: 1.12;
+    letter-spacing: -0.03em;
+    max-width: 24ch;
+    text-wrap: balance;
+  }
+
+  .article-dek {
+    font-family: var(--font-body);
+    font-size: 1.1875rem;
+    line-height: 1.55;
+    color: var(--color-text-secondary);
+    max-width: 62ch;
+    margin-top: var(--space-md);
+    text-wrap: pretty;
   }
 
   .article-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
     font-family: var(--font-heading);
     font-size: 0.8125rem;
     color: var(--color-text-tertiary);
-    margin-top: var(--space-sm);
+    margin-top: var(--space-md);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .article-meta a {
+    color: var(--color-text);
+    font-weight: 500;
+    text-decoration: none;
+  }
+
+  .article-meta a:hover {
+    color: var(--color-accent);
   }
 </style>

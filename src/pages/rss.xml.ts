@@ -8,14 +8,15 @@ export async function GET(context: APIContext) {
   );
 
   return rss({
-    title: "Blog",
-    description: "Writing about technology and software.",
+    title: "Pavel Savinov",
+    description: "Notes on distributed systems, testing and building with AI agents.",
+    customData: "<language>en</language>",
     site: context.site!,
     items: posts.map((post) => ({
       title: post.data.title,
       pubDate: post.data.date,
       description: post.data.description,
-      link: `/posts/${post.id}`,
+      link: `/posts/${post.id}/`,
     })),
   });
 }
