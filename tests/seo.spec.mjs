@@ -19,7 +19,7 @@ test("robots.txt and sitemap are served as text and list only canonical pages", 
   expect(await robots.text()).toContain("Sitemap: https://getjump.me/sitemap-index.xml");
 
   const sitemap = await (await request.get("/sitemap-0.xml")).text();
-  for (const post of posts) expect(sitemap).toContain(`<loc>https://getjump.me${post}</loc>`);
+  for (const post of posts) expect(sitemap).toMatch(new RegExp(`<loc>https://getjump.me${post}</loc><lastmod>\\d{4}-\\d{2}-\\d{2}T`));
   expect(sitemap).not.toContain("/search/");
   expect(sitemap).not.toContain("/404");
 });
@@ -31,6 +31,7 @@ for (const post of posts) {
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", `https://getjump.me${post}`);
     const title = await page.locator("h1").first().textContent();
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", title.trim());
+    expect((await page.title()).length, "document title fits a search result").toBeLessThanOrEqual(60);
     const image = await page.locator('meta[property="og:image"]').getAttribute("content");
     expect(image).not.toContain("/og/default.png");
     const png = await request.get(new URL(image).pathname);

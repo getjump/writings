@@ -8,3 +8,7 @@ dist/
 .env.*
 test-results/
 tests/**/*-snapshots/
+
+docs/
+drafts/
+__pycache__/

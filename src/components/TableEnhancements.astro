@@ -7,7 +7,7 @@
   }
 
   :global(table th[data-sortable]:hover) {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: color-mix(in srgb, var(--color-text) 5%, transparent);
   }
 
   :global(.sort-indicator) {
@@ -39,9 +39,9 @@
       if (/^\u22480$/.test(value)) {
         color = "var(--color-text-tertiary)";
       } else if (/^[+]/.test(value)) {
-        color = "#16a34a";
+        color = "var(--color-positive)";
       } else if (/^[\-\u2212]/.test(value)) {
-        color = "#dc2626";
+        color = "var(--color-negative)";
       }
 
       if (color) {

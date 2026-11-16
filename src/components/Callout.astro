@@ -30,23 +30,41 @@ const { type = "info", title } = Astro.props;
   }
 
   .callout--info {
-    --callout-accent: #4a7fb5;
+    --callout-accent: #2f6496;
     --callout-bg: rgba(74, 127, 181, 0.06);
   }
 
   .callout--warning {
-    --callout-accent: #b5944a;
+    --callout-accent: #80621a;
     --callout-bg: rgba(181, 148, 74, 0.06);
   }
 
   .callout--success {
-    --callout-accent: #4a9e6b;
+    --callout-accent: #2b7347;
     --callout-bg: rgba(74, 158, 107, 0.06);
   }
 
   .callout--insight {
-    --callout-accent: #7b5ea7;
+    --callout-accent: #6a4d96;
     --callout-bg: rgba(123, 94, 167, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .callout--info {
+      --callout-accent: #7fb0e0;
+    }
+
+    .callout--warning {
+      --callout-accent: #d4b46a;
+    }
+
+    .callout--success {
+      --callout-accent: #6fc28f;
+    }
+
+    .callout--insight {
+      --callout-accent: #ad93d6;
+    }
   }
 
   .callout__title {

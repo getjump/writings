@@ -13,6 +13,7 @@ import "katex/dist/katex.min.css";
 
 interface Props {
   title: string;
+  socialTitle?: string;
   description?: string;
   ogType?: "website" | "article";
   ogImage?: string;
@@ -25,10 +26,11 @@ interface Props {
 const siteName = "Pavel Savinov";
 const {
   title,
+  socialTitle = title,
   description = "Pavel Savinov - senior backend engineer (Go). Notes on distributed systems, testing and building with AI agents.",
   ogType = "website",
   ogImage = "/og/default.png",
-  ogImageAlt = title,
+  ogImageAlt = socialTitle,
   publishedTime,
   modifiedTime,
   noindex = false,
@@ -48,12 +50,13 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
     <meta name="author" content={profile.basics.name} />
     <meta name="robots" content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large"} />
     {!noindex && <link rel="canonical" href={canonicalURL.href} />}
-    <meta name="theme-color" content="#fafaf9" />
+    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)" />
 
     <meta property="og:site_name" content={siteName} />
     <meta property="og:locale" content="en_US" />
     <meta property="og:type" content={ogType} />
-    <meta property="og:title" content={title} />
+    <meta property="og:title" content={socialTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL.href} />
     <meta property="og:image" content={ogImageURL} />
@@ -66,7 +69,7 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
     {ogType === "article" && <meta property="article:author" content={new URL("/hire/", Astro.site).href} />}
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
+    <meta name="twitter:title" content={socialTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageURL} />
     <meta name="twitter:image:alt" content={ogImageAlt} />
@@ -96,7 +99,7 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
         import("mermaid").then(({ default: mermaid }) => {
           mermaid.initialize({
             startOnLoad: false,
-            theme: "neutral",
+            theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
             themeVariables: { background: "transparent" },
           });
 
