@@ -8,6 +8,7 @@ import PostFooter from "../../components/PostFooter.astro";
 import { person, personId } from "../../lib/profile";
 import { ogImageFor, readingMinutes, sortByDate } from "../../lib/posts";
 import { getCollection, render } from "astro:content";
+import "katex/dist/katex.min.css";
 
 export async function getStaticPaths() {
   const posts = sortByDate(await getCollection("posts"));

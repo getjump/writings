@@ -42,7 +42,7 @@ function formatLabel(s: string) {
   <svg
     viewBox={`0 0 ${svgW} ${svgH}`}
     xmlns="http://www.w3.org/2000/svg"
-    role="img"
+    role="group"
     aria-label="Error Type Breakdown horizontal bar chart"
     style="width:100%;height:auto;display:block;"
   >
@@ -164,6 +164,15 @@ function formatLabel(s: string) {
     filter: brightness(1.15);
   }
 
+  .eb-bar-rect:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .eb-bar-rect:focus:not(:focus-visible) {
+    outline: none;
+  }
+
   .eb-pct-label {
     font-family: var(--font-mono, monospace);
     font-size: 11px;
@@ -248,6 +257,15 @@ function formatLabel(s: string) {
       });
     }
 
+    addEventListener("beforeprint", () => {
+      animated = true;
+      bars.forEach((bar) => {
+        bar.style.transition = "none";
+        bar.setAttribute("width", bar.getAttribute("data-target-w") || "0");
+      });
+      pctLabels.forEach((lbl) => lbl.setAttribute("opacity", "1"));
+    });
+
     // IntersectionObserver to trigger animation
     const observer = new IntersectionObserver(
       (entries) => {
@@ -262,27 +280,35 @@ function formatLabel(s: string) {
     );
     observer.observe(wrapper);
 
-    function showTooltip(bar: SVGRectElement, e: MouseEvent) {
-      if (!tooltip || !ttTitle || !ttCount || !ttSeverity) return;
-
+    function tooltipLines(bar: SVGRectElement) {
       const label = bar.getAttribute("data-label") || "";
       const count = bar.getAttribute("data-count") || "";
       const pct = bar.getAttribute("data-pct") || "";
       const severity = bar.getAttribute("data-severity") || "";
-
-      ttTitle.textContent = label;
-      ttCount.textContent = `${parseInt(count).toLocaleString()} errors (${pct}% of all errors)`;
-      ttSeverity.textContent = `This is a ${severity} misclassification`;
-
-      tooltip.style.display = "block";
-      positionTooltip(e);
+      return [
+        label,
+        `${parseInt(count).toLocaleString()} errors (${pct}% of all errors)`,
+        `This is a ${severity} misclassification`,
+      ];
     }
 
-    function positionTooltip(e: MouseEvent) {
+    function showTooltip(bar: SVGRectElement, cx: number, cy: number) {
+      if (!tooltip || !ttTitle || !ttCount || !ttSeverity) return;
+
+      const [title, count, severity] = tooltipLines(bar);
+      ttTitle.textContent = title;
+      ttCount.textContent = count;
+      ttSeverity.textContent = severity;
+
+      tooltip.style.display = "block";
+      positionTooltip(cx, cy);
+    }
+
+    function positionTooltip(cx: number, cy: number) {
       if (!tooltip || !wrapper) return;
       const rect = wrapper.getBoundingClientRect();
-      const x = e.clientX - rect.left + 12;
-      const y = e.clientY - rect.top - 10;
+      const x = cx - rect.left + 12;
+      const y = cy - rect.top - 10;
 
       const tipRect = tooltip.getBoundingClientRect();
       const maxX = rect.width - tipRect.width - 8;
@@ -299,17 +325,52 @@ function formatLabel(s: string) {
     // Bar hover events
     bars.forEach((bar) => {
       bar.addEventListener("mouseenter", (e: MouseEvent) => {
-        showTooltip(bar, e);
+        showTooltip(bar, e.clientX, e.clientY);
       });
 
       bar.addEventListener("mousemove", (e: MouseEvent) => {
-        positionTooltip(e);
+        positionTooltip(e.clientX, e.clientY);
       });
 
       bar.addEventListener("mouseleave", () => {
         hideTooltip();
       });
     });
+
+    const items = Array.from(bars);
+    items.forEach((bar, i) => {
+      bar.setAttribute("role", "img");
+      bar.setAttribute("tabindex", i === 0 ? "0" : "-1");
+      bar.setAttribute("aria-label", tooltipLines(bar).join(". "));
+    });
+
+    if (wrapper.dataset.kbBound !== "1") {
+      wrapper.dataset.kbBound = "1";
+
+      items.forEach((bar, i) => {
+        bar.addEventListener("focus", () => {
+          items.forEach((it) => it.setAttribute("tabindex", it === bar ? "0" : "-1"));
+          const r = bar.getBoundingClientRect();
+          showTooltip(bar, r.left + r.width / 2, r.top + 10);
+        });
+
+        bar.addEventListener("blur", hideTooltip);
+
+        bar.addEventListener("keydown", (e: KeyboardEvent) => {
+          let next = -1;
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") next = Math.min(i + 1, items.length - 1);
+          else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = Math.max(i - 1, 0);
+          else if (e.key === "Home") next = 0;
+          else if (e.key === "End") next = items.length - 1;
+          else if (e.key === "Escape") {
+            hideTooltip();
+            return;
+          } else return;
+          e.preventDefault();
+          if (next !== i) items[next].focus();
+        });
+      });
+    }
 
     // Label hover highlights corresponding bar
     barLabels.forEach((label) => {

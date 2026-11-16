@@ -61,36 +61,38 @@
   --space-2xl: 5rem;
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --color-text: #e9e7e3;
-  --color-text-secondary: #b5b3ae;
-  --color-text-tertiary: #8f8d88;
-  --color-bg: #161615;
-  --color-surface: #1e1e1d;
-  --color-border: #2f2f2d;
-  --color-link: #e9e7e3;
-  --color-link-hover: #b5b3ae;
-  --color-code-bg: #1e1e1d;
-  --color-accent: #8ea2ff;
-  --color-accent-soft: #2a3566;
-  --color-positive: #4ade80;
-  --color-negative: #f87171;
-  --chart-blue: #6f9fd4;
-  --chart-green: #5fb581;
-  --chart-gray: #6b6b67;
-  --chart-zero: #7a7a76;
-}
+@media screen {
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-text: #e9e7e3;
+    --color-text-secondary: #b5b3ae;
+    --color-text-tertiary: #8f8d88;
+    --color-bg: #161615;
+    --color-surface: #1e1e1d;
+    --color-border: #2f2f2d;
+    --color-link: #e9e7e3;
+    --color-link-hover: #b5b3ae;
+    --color-code-bg: #1e1e1d;
+    --color-accent: #8ea2ff;
+    --color-accent-soft: #2a3566;
+    --color-positive: #4ade80;
+    --color-negative: #f87171;
+    --chart-blue: #6f9fd4;
+    --chart-green: #5fb581;
+    --chart-gray: #6b6b67;
+    --chart-zero: #7a7a76;
+  }
 
-[data-theme="dark"] .astro-code,
-[data-theme="dark"] .astro-code span {
-  color: var(--shiki-dark) !important;
-  font-style: var(--shiki-dark-font-style) !important;
-  font-weight: var(--shiki-dark-font-weight) !important;
-}
+  [data-theme="dark"] .astro-code,
+  [data-theme="dark"] .astro-code span {
+    color: var(--shiki-dark) !important;
+    font-style: var(--shiki-dark-font-style) !important;
+    font-weight: var(--shiki-dark-font-weight) !important;
+  }
 
-[data-theme="dark"] .astro-code {
-  background-color: var(--color-code-bg) !important;
+  [data-theme="dark"] .astro-code {
+    background-color: var(--color-code-bg) !important;
+  }
 }
 
 *,
@@ -149,6 +151,13 @@ img {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
+}
+
+@media print {
+  .nav,
+  .toc {
+    display: none !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

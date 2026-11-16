@@ -413,13 +413,15 @@ const total = data.wallets.reduce((a, w) => a + w.stats.n, 0);
     opacity: 0.22;
   }
 
-  .rt.is-armed .rt__bar {
-    transform: scaleX(0);
-  }
+  @media screen {
+    .rt.is-armed .rt__bar {
+      transform: scaleX(0);
+    }
 
-  .rt.is-armed .rt__barlabel,
-  .rt.is-armed .rt__top {
-    opacity: 0;
+    .rt.is-armed .rt__barlabel,
+    .rt.is-armed .rt__top {
+      opacity: 0;
+    }
   }
 
   .rt.is-in .rt__bar {

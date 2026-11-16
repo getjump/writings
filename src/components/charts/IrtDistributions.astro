@@ -108,7 +108,7 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         xmlns="http://www.w3.org/2000/svg"
-        role="img"
+        role="group"
         aria-label="Histogram of Contributor Strictness theta parameter"
         style="width:100%;height:auto;display:block;"
       >
@@ -217,7 +217,7 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
       <svg
         viewBox={`0 0 ${svgW} ${svgH}`}
         xmlns="http://www.w3.org/2000/svg"
-        role="img"
+        role="group"
         aria-label="Histogram of Game times GPU Difficulty parameter d"
         style="width:100%;height:auto;display:block;"
       >
@@ -442,6 +442,21 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
     opacity: 0.75;
   }
 
+  .hist-bar:focus-visible,
+  .mean-line:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .mean-line:focus-visible {
+    stroke-width: 3;
+  }
+
+  .hist-bar:focus:not(:focus-visible),
+  .mean-line:focus:not(:focus-visible) {
+    outline: none;
+  }
+
   .irt-tooltip {
     position: absolute;
     pointer-events: none;
@@ -512,6 +527,15 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
       });
     }
 
+    addEventListener("beforeprint", () => {
+      animated = true;
+      allBars.forEach((bar) => {
+        bar.style.transition = "none";
+        bar.setAttribute("y", bar.getAttribute("data-target-y") || "0");
+        bar.setAttribute("height", bar.getAttribute("data-target-h") || "0");
+      });
+    });
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -525,27 +549,40 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
     );
     observer.observe(wrapper);
 
-    function showTooltip(
-      e: MouseEvent,
-      line1: string,
-      line2: string,
-    ) {
+    function tooltipLines(el: SVGElement): [string, string] {
+      const param = el.getAttribute("data-param");
+      if (el.classList.contains("mean-line")) {
+        const mean = el.getAttribute("data-mean");
+        return param === "theta"
+          ? [`Mean \u03B8 = ${mean}`, "Most contributors are 'strict' (report more tinkering)"]
+          : [`Mean d = ${mean}`, "Most game\u00D7GPU pairs are 'easy' (fewer issues)"];
+      }
+      const min = el.getAttribute("data-min");
+      const max = el.getAttribute("data-max");
+      const count = el.getAttribute("data-count");
+      return param === "theta"
+        ? [`\u03B8 \u2208 [${min}, ${max})`, `${count} contributors`]
+        : [`d \u2208 [${min}, ${max})`, `${count} game\u00D7GPU pairs`];
+    }
+
+    function showTooltip(el: SVGElement, cx: number, cy: number) {
       if (!tooltip || !ttLine1 || !ttLine2) return;
+      const [line1, line2] = tooltipLines(el);
       ttLine1.textContent = line1;
       ttLine2.textContent = line2;
       tooltip.style.display = "block";
-      positionTooltip(e);
+      positionTooltip(cx, cy);
     }
 
-    function positionTooltip(e: MouseEvent) {
+    function positionTooltip(cx: number, cy: number) {
       if (!tooltip) return;
       const rect = wrapper.getBoundingClientRect();
       const tipRect = tooltip.getBoundingClientRect();
-      let x = e.clientX - rect.left + 14;
-      let y = e.clientY - rect.top - tipRect.height - 8;
+      let x = cx - rect.left + 14;
+      let y = cy - rect.top - tipRect.height - 8;
       const maxX = rect.width - tipRect.width - 8;
       if (x > maxX) x = maxX;
-      if (y < 0) y = e.clientY - rect.top + 14;
+      if (y < 0) y = cy - rect.top + 14;
       tooltip.style.left = `${x}px`;
       tooltip.style.top = `${y}px`;
     }
@@ -554,55 +591,65 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
       if (tooltip) tooltip.style.display = "none";
     }
 
-    // Bar tooltips
-    allBars.forEach((bar) => {
-      bar.addEventListener("mouseenter", (e: MouseEvent) => {
-        const param = bar.getAttribute("data-param");
-        const min = bar.getAttribute("data-min");
-        const max = bar.getAttribute("data-max");
-        const count = bar.getAttribute("data-count");
-
-        let line1: string;
-        let line2: string;
-
-        if (param === "theta") {
-          line1 = `\u03B8 \u2208 [${min}, ${max})`;
-          line2 = `${count} contributors`;
-        } else {
-          line1 = `d \u2208 [${min}, ${max})`;
-          line2 = `${count} game\u00D7GPU pairs`;
-        }
-
-        showTooltip(e, line1, line2);
+    const hoverables: SVGElement[] = [...allBars, ...meanLines];
+    hoverables.forEach((el) => {
+      el.addEventListener("mouseenter", (e: MouseEvent) => {
+        showTooltip(el, e.clientX, e.clientY);
       });
-
-      bar.addEventListener("mousemove", positionTooltip);
-      bar.addEventListener("mouseleave", hideTooltip);
+      el.addEventListener("mousemove", (e: MouseEvent) => {
+        positionTooltip(e.clientX, e.clientY);
+      });
+      el.addEventListener("mouseleave", hideTooltip);
     });
 
-    // Mean line tooltips
-    meanLines.forEach((line) => {
-      line.addEventListener("mouseenter", (e: MouseEvent) => {
-        const param = line.getAttribute("data-param");
-        const mean = line.getAttribute("data-mean");
+    function centerX(el: SVGElement) {
+      if (el.classList.contains("mean-line")) {
+        return parseFloat(el.getAttribute("x1") || "0");
+      }
+      return parseFloat(el.getAttribute("x") || "0") + parseFloat(el.getAttribute("width") || "0") / 2;
+    }
 
-        let line1: string;
-        let line2: string;
+    const groups = Array.from(wrapper.querySelectorAll<SVGSVGElement>(".irt-chart-container svg")).map((svg) =>
+      hoverables.filter((el) => svg.contains(el)).sort((a, b) => centerX(a) - centerX(b)),
+    );
 
-        if (param === "theta") {
-          line1 = `Mean \u03B8 = ${mean}`;
-          line2 = "Most contributors are 'strict' (report more tinkering)";
-        } else {
-          line1 = `Mean d = ${mean}`;
-          line2 = "Most game\u00D7GPU pairs are 'easy' (fewer issues)";
-        }
-
-        showTooltip(e, line1, line2);
+    groups.forEach((items) => {
+      items.forEach((el, i) => {
+        el.setAttribute("role", "img");
+        el.setAttribute("tabindex", i === 0 ? "0" : "-1");
+        el.setAttribute("aria-label", tooltipLines(el).join(". "));
       });
-
-      line.addEventListener("mousemove", positionTooltip);
-      line.addEventListener("mouseleave", hideTooltip);
     });
+
+    if (wrapper.dataset.kbBound !== "1") {
+      wrapper.dataset.kbBound = "1";
+
+      groups.forEach((items) => {
+        items.forEach((el, i) => {
+          el.addEventListener("focus", () => {
+            items.forEach((it) => it.setAttribute("tabindex", it === el ? "0" : "-1"));
+            const r = el.getBoundingClientRect();
+            showTooltip(el, r.left + r.width / 2, r.top + 8);
+          });
+
+          el.addEventListener("blur", hideTooltip);
+
+          el.addEventListener("keydown", (e: KeyboardEvent) => {
+            let next = -1;
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") next = Math.min(i + 1, items.length - 1);
+            else if (e.key === "ArrowLeft" || e.key === "ArrowUp") next = Math.max(i - 1, 0);
+            else if (e.key === "Home") next = 0;
+            else if (e.key === "End") next = items.length - 1;
+            else if (e.key === "Escape") {
+              hideTooltip();
+              return;
+            } else return;
+            e.preventDefault();
+            if (next !== i) items[next].focus();
+          });
+        });
+      });
+    }
   }
 
   if (document.readyState === "loading") {
