@@ -50,8 +50,46 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
     <meta name="author" content={profile.basics.name} />
     <meta name="robots" content={noindex ? "noindex, follow" : "index, follow, max-image-preview:large"} />
     {!noindex && <link rel="canonical" href={canonicalURL.href} />}
-    <meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#161615" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fafaf9" />
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const media = matchMedia("(prefers-color-scheme: dark)");
+        const stored = () => {
+          try {
+            const value = localStorage.getItem("theme");
+            return value === "light" || value === "dark" ? value : null;
+          } catch {
+            return null;
+          }
+        };
+        const system = () => (media.matches ? "dark" : "light");
+        const apply = (theme) => {
+          root.dataset.theme = theme;
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme === "dark" ? "#161615" : "#fafaf9");
+          document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+            button.setAttribute("aria-pressed", String(theme === "dark"));
+          });
+        };
+        apply(stored() ?? system());
+        document.addEventListener("DOMContentLoaded", () => apply(root.dataset.theme));
+        document.addEventListener("click", (event) => {
+          if (!event.target.closest?.("[data-theme-toggle]")) return;
+          const next = root.dataset.theme === "dark" ? "light" : "dark";
+          try {
+            if (next === system()) localStorage.removeItem("theme");
+            else localStorage.setItem("theme", next);
+          } catch {}
+          apply(next);
+        });
+        media.addEventListener("change", () => {
+          if (!stored()) apply(system());
+        });
+        addEventListener("storage", (event) => {
+          if (event.key === "theme") apply(stored() ?? system());
+        });
+      })();
+    </script>
 
     <meta property="og:site_name" content={siteName} />
     <meta property="og:locale" content="en_US" />
@@ -99,7 +137,7 @@ const ogImageURL = new URL(ogImage, Astro.site).href;
         import("mermaid").then(({ default: mermaid }) => {
           mermaid.initialize({
             startOnLoad: false,
-            theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+            theme: document.documentElement.dataset.theme === "dark" ? "dark" : "neutral",
             themeVariables: { background: "transparent" },
           });
 

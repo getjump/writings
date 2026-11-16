@@ -19,6 +19,15 @@ const links = [
     {links.map((link) => (
       <a href={link.href} aria-current={currentPath === link.href ? "page" : undefined}>{link.label}</a>
     ))}
+    <button type="button" class="theme-toggle" data-theme-toggle aria-label="Dark theme" aria-pressed="false">
+      <svg class="theme-toggle__moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />
+      </svg>
+      <svg class="theme-toggle__sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      </svg>
+    </button>
   </nav>
 </header>
 
@@ -60,6 +69,7 @@ const links = [
 
   .nav-links {
     display: flex;
+    align-items: center;
     gap: var(--space-md) var(--space-lg);
   }
 
@@ -79,6 +89,48 @@ const links = [
   .nav-links a[aria-current="page"] {
     color: var(--color-text);
     border-bottom-color: var(--color-accent);
+  }
+
+  .theme-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    margin: -0.5rem -0.5rem -0.5rem 0;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+  }
+
+  :global(html[data-theme]) .theme-toggle {
+    display: inline-flex;
+  }
+
+  .theme-toggle:hover {
+    color: var(--color-text);
+  }
+
+  .theme-toggle svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .theme-toggle__sun,
+  :global([data-theme="dark"]) .theme-toggle__moon {
+    display: none;
+  }
+
+  :global([data-theme="dark"]) .theme-toggle__sun {
+    display: block;
   }
 
   @media (max-width: 480px) {

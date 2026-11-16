@@ -13,7 +13,7 @@
     "test:responsive": "npx playwright test tests/responsive-screenshots.spec.mjs",
     "test:responsive:update": "npx playwright test tests/responsive-screenshots.spec.mjs --update-snapshots",
     "test:all": "npx playwright test",
-    "test:prod": "BASE_URL=https://getjump.me npx playwright test tests/seo.spec.mjs",
+    "test:prod": "BASE_URL=https://getjump.me npx playwright test tests/seo.spec.mjs tests/theme.spec.mjs",
     "deploy": "astro build && wrangler pages deploy dist --project-name=writings",
     "deploy:preview": "astro build && wrangler pages deploy dist --project-name=writings --branch=preview"
   },
