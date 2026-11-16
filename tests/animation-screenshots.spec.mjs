@@ -17,28 +17,19 @@ async function scrollToHeading(page, text) {
   await page.waitForTimeout(700);
 }
 
-// Helper: wait for mermaid to render
-async function waitForMermaid(page) {
-  await page.waitForFunction(
-    () => document.querySelectorAll(".mermaid svg").length > 0,
-    { timeout: 10000 }
-  ).catch(() => {}); // OK if no mermaid
-}
-
 test.describe("F1 Timeline animation states", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(POST, { waitUntil: "networkidle" });
-    await waitForMermaid(page);
     await page.waitForTimeout(500);
   });
 
-  test("hidden before phases", async ({ page }) => {
-    // Scroll to top — timeline should not be visible
+  test("parked at the research loop before phases", async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(300);
 
     const timeline = page.locator("#f1-timeline");
-    await expect(timeline).toHaveCSS("opacity", "0");
+    await expect(timeline).toHaveCSS("position", "absolute");
+    await expect(timeline.locator(".f1tl-value")).toHaveText("0.000");
   });
 
   test("Phase 1 — first node appears", async ({ page }) => {
@@ -71,15 +62,13 @@ test.describe("F1 Timeline animation states", () => {
     });
   });
 
-  test("hidden after phases section", async ({ page }) => {
-    // Scroll well past the phases
+  test("parked at the end anchor after phases", async ({ page }) => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.waitForTimeout(700);
 
     const timeline = page.locator("#f1-timeline");
-    // Should fade out after leaving phase zone
-    const opacity = await timeline.evaluate((el) => getComputedStyle(el).opacity);
-    expect(parseFloat(opacity)).toBeLessThan(0.5);
+    await expect(timeline).toHaveCSS("position", "absolute");
+    await expect(timeline.locator(".f1tl-value")).toHaveText("0.871");
   });
 });
 
@@ -169,19 +158,16 @@ test.describe("Table enhancements", () => {
   });
 });
 
-test.describe("Mermaid diagrams", () => {
+test.describe("D2 diagrams", () => {
   test("cascade diagram renders as SVG", async ({ page }) => {
     await page.goto(POST, { waitUntil: "networkidle" });
-    await waitForMermaid(page);
 
-    const mermaid = page.locator("pre.mermaid").first();
-    await mermaid.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(1000);
+    const diagram = page.locator(".d2-diagram").first();
+    test.skip((await diagram.count()) === 0, "d2 binary not installed, diagram stays a code block");
+    await diagram.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(500);
 
-    // Should contain rendered SVG
-    const hasSvg = await mermaid.locator("svg").count();
-    expect(hasSvg).toBeGreaterThan(0);
-
-    await expect(mermaid).toHaveScreenshot("mermaid-cascade.png");
+    expect(await diagram.locator("svg").count()).toBeGreaterThan(0);
+    await expect(diagram).toHaveScreenshot("d2-cascade.png");
   });
 });

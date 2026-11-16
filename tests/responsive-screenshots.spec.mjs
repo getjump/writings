@@ -14,8 +14,8 @@ const postSections = [
     const el = page.locator("aside").filter({ hasText: "TL;DR" }).first();
     await el.scrollIntoViewIfNeeded();
   }],
-  ["mermaid", async (page) => {
-    const el = page.locator("pre.mermaid").first();
+  ["diagram", async (page) => {
+    const el = page.locator(".d2-diagram, pre.astro-code").first();
     await el.scrollIntoViewIfNeeded();
   }],
   ["table", async (page) => {
@@ -23,7 +23,7 @@ const postSections = [
     await el.scrollIntoViewIfNeeded();
   }],
   ["collapsible", async (page) => {
-    const el = page.locator("details").first();
+    const el = page.locator(".prose details").first();
     await el.scrollIntoViewIfNeeded();
   }],
   ["formula", async (page) => {
