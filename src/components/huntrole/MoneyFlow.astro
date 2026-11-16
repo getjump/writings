@@ -1,0 +1,326 @@
+---
+import Figure from "./Figure.astro";
+import data from "../../data/huntrole.json";
+
+const W = 920;
+const H = 404;
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const eth = (v: number) => (v >= 1 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(3) : v.toFixed(4));
+const wallet = (id: string) => data.wallets.find((w) => w.id === id)!;
+const fundFrom = (id: string, prefixes: string[]) =>
+  sum(wallet(id).funding.filter((f) => prefixes.some((p) => f.from.startsWith(p))).map((f) => f.eth));
+const outTo = (prefixes: string[]) =>
+  sum(data.treasury.ethOut.filter((o) => prefixes.some((p) => o.to.startsWith(p))).map((o) => o.eth));
+const topup = (id: string) => sum(data.treasury.topups.filter((t) => t.to === id).map((t) => t.eth));
+
+const SEPT3 = 1.66349;
+const RETURNED = 0.029295;
+const OTHERS = data.treasury.incomingEth - SEPT3 - RETURNED;
+const LIFI_IN = 0.011469;
+const totalPings = sum(data.wallets.map((w) => w.stats.n));
+const totalGas = sum(data.wallets.map((w) => w.gasEth));
+
+type Node = { id: string; x: number; y: number; w: number; h: number; title: string; sub?: string; strong?: boolean; tip: string };
+const nodes: Node[] = [
+  { id: "old", x: 0, y: 24, w: 196, h: 40, title: "Nine wallets on 3 Sep", sub: "one funding history since 2021", tip: "Nine wallets on 3 September|ten transfers in 28 minutes; the first sent 1.295 ETH plus USDC, WETH and smaller tokens|at least seven share funding since 2021; an owner's move and a stolen key look alike on chain" },
+  { id: "others", x: 0, y: 80, w: 196, h: 40, title: "27 other addresses", sub: "two also pay the same people", tip: `27 other addresses|${eth(OTHERS)} ETH in total, 4 Sep to 15 Nov; three transfers of 0.10 to 0.12 ETH, the rest much smaller|two of the senders also paid the treasury's USDT recipients` },
+  { id: "t", x: 306, y: 30, w: 156, h: 96, title: "Treasury", sub: "0xf970...ecd0", tip: `Treasury 0xf97062cb|${data.treasury.total} transactions since 3 Sep, ${data.treasury.sent} of them signed on ${data.treasury.sentDays} days|sells tokens through aggregators and pays the pointer wallets` },
+  { id: "lifi", x: 724, y: 16, w: 196, h: 36, title: "LI.FI bridge and swaps", tip: "LI.FI router 0x1231deb6|four transfers, 2.15 ETH of them within three hours of the first deposit" },
+  { id: "inch", x: 724, y: 62, w: 196, h: 36, title: "1inch swaps", tip: "1inch router 0x11111112|6 Nov and 11 Nov" },
+  { id: "ffout", x: 724, y: 108, w: 196, h: 36, title: "FixedFloat deposit addresses", strong: true, tip: "Two single-use deposit addresses|0.034 ETH on 28 Sep, 0.08 ETH on 19 Oct|each forwards to the FixedFloat hot wallet within two minutes" },
+  { id: "misc", x: 724, y: 154, w: 196, h: 36, title: "Other routers, small payments", tip: "Uniswap and 0x routers and one small payment|three transfers" },
+  { id: "d96", x: 0, y: 228, w: 196, h: 36, title: "0x96c8e62c", sub: "fed by a 102-address disperser", tip: "0x96c8e62c|8 transactions in three days, funded by a wallet that paid 102 addresses" },
+  { id: "ffin", x: 0, y: 274, w: 196, h: 36, title: "FixedFloat hot wallet", strong: true, tip: "FixedFloat hot wallet 0x4e5b2e1d|first deposit of the second wallet on 25 Jul, restart of the HuntRole wallet on 14 Oct|a hot wallet serves every customer of the exchange, so this is not attribution" },
+  { id: "swap", x: 0, y: 320, w: 196, h: 36, title: "Swap routed through LI.FI", tip: "Internal transfer inside a swap|first money of the HuntRole wallet, 4 Sep 05:10 UTC, eight minutes before its first ping|the funds came in from another chain" },
+  { id: "relay", x: 0, y: 366, w: 196, h: 36, title: "Service wallet, two relays", tip: "0xeba88149 through 0x2fa811c1 and 0xa8fb274f|six drip top-ups, 11 to 28 Jul; a seventh, worth a few transactions, came from another address on 30 Jul|on 27 Aug one relay received 35 USDT from an address the treasury pays" },
+  { id: "second", x: 506, y: 228, w: 150, h: 36, title: "Second wallet", sub: `${wallet("second").stats.n} pings`, tip: `Second wallet 0xa322E5f3|received ${eth(fundFrom("second", [""]))} ETH, burned ${eth(wallet("second").gasEth)} as gas, returned ${eth(RETURNED)}` },
+  { id: "main", x: 506, y: 284, w: 150, h: 36, title: "HuntRole wallet", sub: `${wallet("main").stats.n} pings`, tip: `HuntRole wallet 0x1eEf0849|received ${eth(fundFrom("main", [""]) + LIFI_IN)} ETH, burned ${eth(wallet("main").gasEth)} as gas|the rest covers roughly a thousand more writes` },
+  { id: "early", x: 506, y: 340, w: 150, h: 36, title: "Early wallet", sub: `${wallet("early").stats.n} pings`, tip: `Early wallet 0xee36cc64|received ${eth(fundFrom("early", [""]))} ETH, burned ${eth(wallet("early").gasEth)} as gas|ran dry on 31 Jul and was never refilled` },
+  { id: "gas", x: 724, y: 284, w: 196, h: 36, title: `Gas for ${totalPings.toLocaleString("en-US")} pings`, tip: `Transaction fees|${eth(totalGas)} ETH for the whole pointer system over four months` },
+];
+const N = Object.fromEntries(nodes.map((n) => [n.id, n]));
+
+type Edge = { a: string; b: string; v: number; when: string; ay?: number; by?: number; down?: number; back?: boolean; lx?: number; ly?: number };
+const edges: Edge[] = [
+  { a: "old", b: "t", v: SEPT3, when: "3 Sep", by: 56 },
+  { a: "others", b: "t", v: OTHERS, when: "4 Sep to 15 Nov", by: 96 },
+  { a: "t", b: "lifi", v: outTo(["lifi"]), when: "3 Sep to 15 Nov", ay: 50 },
+  { a: "t", b: "inch", v: outTo(["1inch"]), when: "6 and 11 Nov", ay: 70 },
+  { a: "t", b: "ffout", v: outTo(["fixedfloat-deposit"]), when: "28 Sep, 19 Oct", ay: 84 },
+  { a: "t", b: "misc", v: outTo(["misc"]), when: "22 Oct to 1 Nov", ay: 98 },
+  { a: "t", b: "second", v: topup("second"), when: "13 and 16 Oct", down: 356, by: 238 },
+  { a: "t", b: "main", v: topup("main"), when: "11 Nov", down: 334, by: 294 },
+  { a: "second", b: "t", v: RETURNED, when: "14 Oct", back: true },
+  { a: "d96", b: "second", v: fundFrom("second", ["short-lived"]), when: "30 Jul", by: 248 },
+  { a: "ffin", b: "second", v: fundFrom("second", ["fixedfloat"]), when: "25 Jul", ay: 286, by: 256 },
+  { a: "ffin", b: "main", v: fundFrom("main", ["fixedfloat"]), when: "14 Oct", ay: 298, by: 302 },
+  { a: "swap", b: "main", v: LIFI_IN, when: "4 Sep", by: 312 },
+  { a: "relay", b: "early", v: fundFrom("early", ["relay"]), when: "11 to 28 Jul", by: 358 },
+  { a: "second", b: "gas", v: wallet("second").gasEth, when: "25 Jul to 19 Oct", by: 294 },
+  { a: "main", b: "gas", v: wallet("main").gasEth, when: "4 Sep to 15 Nov", by: 302 },
+  { a: "early", b: "gas", v: wallet("early").gasEth, when: "11 to 31 Jul", by: 310 },
+];
+
+const width = (v: number) => Math.max(1.6, 15 * Math.sqrt(v / 2.5));
+const mid = (n: Node) => n.y + n.h / 2;
+const drawn = edges.map((e) => {
+  const A = N[e.a];
+  const B = N[e.b];
+  let d: string;
+  let lx: number;
+  let ly: number;
+  if (e.back) {
+    const sx = A.x + A.w / 2 + 20;
+    const ex = B.x + B.w;
+    const ey = B.y + B.h - 10;
+    d = `M${sx} ${A.y}C${sx} ${A.y - 60},${ex + 70} ${ey},${ex + 7} ${ey}`;
+    lx = sx + 8;
+    ly = A.y - 34;
+  } else if (e.down) {
+    const sy = A.y + A.h;
+    const ex = B.x;
+    const ey = e.by ?? mid(B);
+    d = `M${e.down} ${sy}C${e.down} ${sy + 70},${ex - 70} ${ey},${ex} ${ey}`;
+    lx = e.down + (e.b === "second" ? 34 : -6);
+    ly = sy + (e.b === "second" ? 44 : 62);
+  } else {
+    const sx = A.x + A.w;
+    const sy = e.ay ?? mid(A);
+    const ex = B.x;
+    const ey = e.by ?? mid(B);
+    const k = (ex - sx) * 0.5;
+    d = `M${sx} ${sy}C${sx + k} ${sy},${ex - k} ${ey},${ex} ${ey}`;
+    lx = sx + (ex - sx) * 0.5;
+    ly = (sy + ey) / 2 - 4;
+  }
+  return {
+    ...e,
+    d,
+    w: r1(width(e.v)),
+    lx: r1(e.lx ?? lx),
+    ly: r1(e.ly ?? ly),
+    label: eth(e.v),
+    tip: `${eth(e.v)} ETH|${N[e.a].title} to ${N[e.b].title}|${e.when}`,
+  };
+});
+---
+
+<Figure
+  title="Where the money comes from and where it goes"
+  lede="Top: the operator's treasury, which mostly cashes out a token portfolio. Bottom: the pointer wallets, which run on pocket change. Hover a box to trace its transfers."
+>
+  <div class="mf" data-mf>
+    <div class="mf__wrap">
+      <div class="hr-scroll">
+        <svg class="mf__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Node-link diagram of ETH transfers between funding sources, the treasury, three pointer wallets and exits. The table below holds the same data.">
+          <defs>
+            <marker id="mf-arrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L8 4L0 8Z" fill="#555555"></path>
+            </marker>
+          </defs>
+          <text class="mf__band" x="0" y="12">The money</text>
+          <text class="mf__band" x="0" y="216">The pointer system</text>
+          <line class="mf__sep" x1="0" x2={W} y1="204" y2="204"></line>
+          {
+            drawn.map((e) => (
+              <g class="mf__edge" data-a={e.a} data-b={e.b} data-tip={e.tip}>
+                <path class="mf__hit" d={e.d} />
+                <path
+                  class:list={["mf__line", { "mf__line--back": e.back }]}
+                  d={e.d}
+                  stroke-width={e.w}
+                  marker-end={e.back ? "url(#mf-arrow)" : undefined}
+                />
+              </g>
+            ))
+          }
+          {
+            nodes.map((n) => (
+              <g class="mf__node" data-node={n.id} data-tip={n.tip}>
+                <rect class:list={["mf__box", { "mf__box--strong": n.strong }]} x={n.x} y={n.y} width={n.w} height={n.h} rx="4" />
+                <text class="mf__title" x={n.x + 10} y={n.sub ? n.y + n.h / 2 - 2 : n.y + n.h / 2 + 4}>{n.title}</text>
+                {n.sub && <text class="mf__sub" x={n.x + 10} y={n.y + n.h / 2 + 11}>{n.sub}</text>}
+              </g>
+            ))
+          }
+          {
+            drawn.map((e) => (
+              <text class="mf__amount" x={e.lx} y={e.ly} text-anchor="middle" data-a={e.a} data-b={e.b}>{e.label}</text>
+            ))
+          }
+        </svg>
+      </div>
+      <div class="hr-tip" role="status"></div>
+    </div>
+
+    <details class="hr-table">
+      <summary>Show the transfers as a table</summary>
+      <div class="hr-table__wrap">
+        <table>
+          <thead>
+            <tr><th>From</th><th>To</th><th>ETH</th><th>When, 2026</th></tr>
+          </thead>
+          <tbody>
+            {
+              drawn.map((e) => (
+                <tr>
+                  <td>{N[e.a].title}</td>
+                  <td>{N[e.b].title}</td>
+                  <td>{e.label}</td>
+                  <td>{e.when}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+  <Fragment slot="caption">
+    Ethereum only, amounts in ETH, line width follows the square root of the amount. The dashed line is the one
+    transfer that went back. Token transfers and swap proceeds are not drawn, so more ETH leaves the treasury than
+    enters it here. The two boxes with a dark outline are the same exchange.
+  </Fragment>
+</Figure>
+
+<style>
+  .mf__wrap {
+    position: relative;
+  }
+
+  .mf__svg {
+    display: block;
+    width: 100%;
+    min-width: 800px;
+    height: auto;
+  }
+
+  .mf__band {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--hr-ink-2);
+  }
+
+  .mf__sep {
+    stroke: var(--hr-line);
+    stroke-width: 1;
+  }
+
+  .mf__box {
+    fill: var(--hr-surface);
+    stroke: var(--hr-line-strong);
+    stroke-width: 1;
+  }
+
+  .mf__box--strong {
+    stroke: var(--hr-ink);
+    stroke-width: 1.6;
+  }
+
+  .mf__title {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--hr-ink);
+  }
+
+  .mf__sub {
+    font-size: 10.5px;
+    fill: var(--hr-muted);
+  }
+
+  .mf__line {
+    fill: none;
+    stroke: #9a9a96;
+    stroke-opacity: 0.75;
+    stroke-linecap: butt;
+    transition:
+      stroke 0.15s ease,
+      stroke-opacity 0.15s ease;
+  }
+
+  .mf__line--back {
+    stroke-dasharray: 4 3;
+    stroke: #555555;
+  }
+
+  .mf__hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+  }
+
+  .mf__amount {
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    fill: var(--hr-ink-2);
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .mf__node {
+    cursor: default;
+  }
+
+  .mf.is-dim .mf__edge:not(.is-hot) .mf__line {
+    stroke-opacity: 0.18;
+  }
+
+  .mf.is-dim .mf__amount:not(.is-hot) {
+    opacity: 0.2;
+  }
+
+  .mf.is-dim .mf__edge.is-hot .mf__line {
+    stroke: var(--hr-ink);
+    stroke-opacity: 0.9;
+  }
+
+  .mf.is-dim .mf__node:not(.is-hot) .mf__title,
+  .mf.is-dim .mf__node:not(.is-hot) .mf__sub {
+    opacity: 0.45;
+  }
+</style>
+
+<script>
+  import { attachTips } from "./tip";
+
+  function initMoneyFlow() {
+    document.querySelectorAll<HTMLElement>("[data-mf]").forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = "1";
+      const wrap = root.querySelector<HTMLElement>(".mf__wrap")!;
+      const edges = Array.from(root.querySelectorAll<SVGGElement>(".mf__edge"));
+      const amounts = Array.from(root.querySelectorAll<SVGTextElement>(".mf__amount"));
+      const nodes = Array.from(root.querySelectorAll<SVGGElement>(".mf__node"));
+
+      attachTips(wrap, (el) => {
+        const node = el?.getAttribute("data-node");
+        const a = el?.getAttribute("data-a");
+        const b = el?.getAttribute("data-b");
+        const on = Boolean(node || a);
+        root.classList.toggle("is-dim", on);
+        const hotNodes = new Set<string>();
+        const match = (x: Element) => {
+          const xa = x.getAttribute("data-a");
+          const xb = x.getAttribute("data-b");
+          const hit = node ? xa === node || xb === node : xa === a && xb === b;
+          if (hit && on) {
+            hotNodes.add(xa || "");
+            hotNodes.add(xb || "");
+          }
+          return hit && on;
+        };
+        edges.forEach((e) => e.classList.toggle("is-hot", match(e)));
+        amounts.forEach((t) => t.classList.toggle("is-hot", match(t)));
+        nodes.forEach((n) => n.classList.toggle("is-hot", hotNodes.has(n.dataset.node || "")));
+      });
+    });
+  }
+
+  initMoneyFlow();
+  document.addEventListener("astro:page-load", initMoneyFlow);
+</script>

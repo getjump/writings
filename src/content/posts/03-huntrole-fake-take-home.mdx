@@ -1,0 +1,238 @@
+---
+title: "A Recruiter Sent Me a Take-Home Test. It Takes Its Orders From an Ethereum Wallet."
+description: "A fake recruiter, a VS Code extension that shows one script and runs another, and malware that looks up its server in Ethereum transactions. Read without running a line of it."
+date: 2026-11-16
+ogImage: /og/03-huntrole-fake-take-home.png
+---
+import Collapsible from '../../components/Collapsible.astro';
+import KillChain from '../../components/huntrole/KillChain.astro';
+import ScriptSplit from '../../components/huntrole/ScriptSplit.astro';
+import MarkerDecoder from '../../components/huntrole/MarkerDecoder.astro';
+import RotationTimeline from '../../components/huntrole/RotationTimeline.astro';
+import Heartbeat from '../../components/huntrole/Heartbeat.astro';
+import MoneyFlow from '../../components/huntrole/MoneyFlow.astro';
+import HomeMap from '../../components/huntrole/HomeMap.astro';
+
+On 10 November a recruiter emailed me about a DevOps Engineer role. The email came to the alias from my post in the October "Who wants to be hired?" thread on Hacker News and named two companies from my CV. The next step was a coding assessment inside VS Code, through an extension from the official Marketplace.
+
+I didn't install it. I downloaded the package, read it, and followed every address it pointed to. At the end of the trail there is a remote-access tool and a credential stealer. The part I enjoyed is in the middle: **the malware finds its server by reading the latest transaction of an Ethereum wallet.** That wallet is public, so four months of the operator's server moves, working hours and money are public too.
+
+<KillChain installs={126} installsDate="16 Nov" />
+
+## The email
+
+The message itself was fine: the right role, real employers (both are on my public profile). The problems were one layer down. The sender's domain, `huntrole.org`, was registered seven days earlier, the DKIM signature didn't verify, and iCloud had already filed the message as spam. And the assessment could only be done in an extension that starts together with the editor.
+
+The careers site won't take an application without a PDF resume, so it collects CVs even from people who never open VS Code. I sent it an invented candidate and got a ticket ID and instructions pointing at the extension.
+
+## The extension shows one script and runs another
+
+There is no malware in the package, and that's the design. On every editor start the extension (`huntrole.assessment-tool`, 126 installs on 16 November) sends the hostname and VS Code's `machineId` to `api.huntrole.com` and keeps a WebSocket open.
+
+When the assessment panel opens, the server returns a task with two code fields. The panel "types" `displayScript` on screen, then passes `script` to `new Function` with the real `require` and `process`: files, network, child processes. No ticket and no Run button needed.
+
+<ScriptSplit />
+
+For a device the server didn't know, `script` was 150 harmless bytes. After my invented device registered and opened the socket it was 8,665 bytes, and `displayScript` hadn't changed. So a scanner sees a clean package, and so does a candidate who reads the files before installing.
+
+## The server address is a transaction
+
+The long script has no server address in it. It has a wallet address and code that looks up the wallet's latest transaction. With the names cleaned up:
+
+```js
+const wallet = "0x1eEf0849EDa15d87f64e51C73C8442Cf3c8bCEF3".toLowerCase();
+
+function decode(to) {
+  const bytes = Buffer.from(to.replace(/^0x/i, ""), "hex");
+  const ip = (b) => b[0] + "." + b[1] + "." + b[2] + "." + b[3];
+  return [ip(bytes.subarray(0, 4)), ip(bytes.subarray(4, 8))];
+}
+```
+
+`to` is the recipient of that transaction. An Ethereum address is 20 bytes, and the operator fills them with an IPv4 address, the same address again, and 12 bytes that spell `helloipbot!!`. The transaction moves zero ETH and nobody owns the recipient.
+
+From here on, that recipient is a **marker**, a transaction to it is a **ping**, and the sender is a **pointer wallet**.
+
+<MarkerDecoder />
+
+The script doesn't search for the ping. It rounds the current block number down to a multiple of 1,000 and opens six blocks around the round numbers, so the writer has to be punctual. If those are empty it falls back to a block explorer, and nothing checks the record's age, so a wallet that has stopped writing still points at its last server.
+
+For the operator this is cheap and hard to take down: no registrar can remove the pointer, and a ping costs about 0.00007 ETH. In exchange, every server they ever used, and the minute they switched to it, stays on a public ledger for good.
+
+## Three wallets, eleven servers
+
+Every marker ends in the same 12 bytes, so the wallets can be found from the other side. I scanned every Ethereum transaction since 1 April for that ending and got three senders. Between them: 1,157 pings to 11 servers from July to 15 November.
+
+<RotationTimeline />
+
+- The early wallet worked for three weeks in July and starts with a developer's test transactions: the text `hello` as data, markers that decode to addresses no packet can reach. I couldn't find it in any public report.
+- The second ran from 25 July to 19 October, with 607 pings to eight servers. It's the wallet from the August reports on trojanised npm packages.
+- The third is the one in my script: 303 pings to five servers since 4 September. It last switched on 12 November, two days after the email.
+
+Nine of the eleven servers, and `api.huntrole.com` too, sit at one hosting company, Evoxt. The two newest are at another, Virtuo, side by side in one /24.
+
+## The timer counts blocks
+
+<Heartbeat />
+
+The typical gap between pings is 200.6 minutes, which is exactly 1,000 blocks. Of the third wallet's 303 pings, 270 landed in a block whose number ends in 999, 000 or 001, the blocks the script opens first. The timer keeps a fresh copy of the record where the reader will look, even when the address hasn't changed.
+
+The treasury that pays for this keeps hours. Its key has signed 284 transactions on 14 chains over 37 days, none of them between 12:00 and 22:59 UTC. The email's `Date` header says `+0500`, and on that clock the signing hours look like a working day. Both are trivial to fake, so I won't name a time zone.
+
+## Where the gas money comes from
+
+<MoneyFlow />
+
+The pointer wallets have burned about 0.08 ETH in four months. One treasury wallet funded two of the three, and each of its three top-ups was followed by a server change: 7 minutes, 8 minutes and 44 hours later.
+
+The treasury's own money looks stolen, though the ledger alone can't prove it. On 3 September nine wallets, idle for months and mostly tied to each other by old transfers, sent it what they held within half an hour, on Ethereum and several other chains. The treasury sold the tokens, bridged about 12,560 USDC to BNB Chain and cashed out through one-time addresses of what looks like a swap service. Nine days later someone, I think the owner, moved what was left to a fresh address, and none of it went to the treasury.
+
+It happened again on 3 November. A private wallet sent the treasury 5,344 USDT on BNB Chain and a little ETH on Ethereum within four minutes, and about twenty minutes later the treasury swapped it and moved it on.
+
+Wallet files are on the stealer's list, but nothing on chain says it emptied these wallets. Their addresses stay out of this post.
+
+The treasury also pays people: 32 USDT transfers to eight addresses since September, 3,813 USDT in total, at most 21% of what those addresses received this year. Two of the eight cash out through an address that forwards everything to a wallet the block explorer labels OKX, and two more into one labelled Lemon Cash. Both exchanges verify their customers. If the labels are right, someone with the authority to ask can get names.
+
+Going in, there is no such door: two of the pointer wallets got their first ETH from FixedFloat, an exchange that asks for no identity.
+
+## The same wallets feed npm and PyPI
+
+The recruiter front is one delivery channel of several. The second wallet's address is quoted in at least 40 advisories in the OpenSSF malicious-packages repository, nearly all for npm. On 9 November JFrog [described](https://research.jfrog.com/post/accurasofthire-fake-interview/) another fake recruiting company, AccuraSoftHire, whose take-home project reads the same wallet through the same paths with the same XOR keys. And the October reports on hijacked npm packages from GitGuardian, OX Security and Sonatype name the third wallet, the one in my script.
+
+## What arrives on the machine
+
+I fetched each stage once from a disposable VM and decoded it without executing anything: two small loaders, a remote-access tool, a 1.4 MB injector that plants code into other applications, and a Python stealer.
+
+<HomeMap />
+
+The remote-access tool is byte-identical to a published DEV#POPPER sample. It dials out, so a home router doesn't stop it, and it accepts arbitrary shell commands. The stealer copies browser databases, keychain files and wallet files. Since I ran nothing, I can't say what it actually gets from a real machine. The injector I mostly couldn't read.
+
+## Who is behind it
+
+Vendor reports on related incidents attribute this family (PolinRider, DEV#POPPER) to North Korean groups. My data ties HuntRole to the family through identical bytes, shared wallets and shared servers. It says nothing about the country.
+
+Is this the crew that took about 6.3 billion dollars from Binance on 29 October? By Binance's account that attack also went through a fake hiring process with a coding assignment. None of the 453 addresses around this ledger is among the 608 Ethereum addresses in the FBI alert, and Binance has published no hashes or servers to compare. I found no link and can't rule one out.
+
+## If you installed it
+
+Check for the extension and for what the remote-access tool leaves behind:
+
+```bash
+code --list-extensions | grep -i huntrole
+```
+
+```bash
+ls -la ~/.node_modules/ 2>/dev/null | grep -i npm-ws
+```
+
+```bash
+find ~ /Applications \( -name "*.inz.cjs" -o -name "*.inz.orig" -o -name "*.inz.tmp" \) 2>/dev/null
+```
+
+- **Installed, panel never opened.** The server has your hostname and machine ID. As far as the code shows, nothing else ran. The extension can open the panel on its own, though, so if in doubt count it as opened.
+- **Panel opened.** Assume the script ran, whatever the checks show.
+- **Any of those files exist.** The machine is compromised. From another device, rotate everything your account could read: `.env` files, browser passwords and sessions, Git and cloud credentials, wallet seeds. Then reinstall Node and the patched applications, or rebuild the machine.
+
+When Microsoft removes a malicious extension, VS Code uninstalls it automatically (so its documentation says). Whatever the tool planted stays.
+
+## Who has been told
+
+On 15 November I reported the extension to Microsoft, the domains and mailbox to Namecheap, the careers site to Vercel, and the servers to Evoxt and Virtuo. Two hours later I had automatic acknowledgements. A day later the extension is still listed.
+
+The operator was busy that day too. Five hours before my reports the treasury signed 29 transactions on ten chains, most of them moving its leftovers to an address it had never used. The next morning that address signed for the first time: it swapped some BNB into USDT and sent 60 USDT to one of the eight addresses the old treasury had been paying. It pays the same people, so I'm calling it the new treasury.
+
+## How I read it without running it
+
+Coding agents did most of the reading, and a sample can talk to the model that reads it: a planted `AGENTS.md` is a prompt injection attempt. So the sample was only ever data, the model reading it had no network, no shell and no secrets, and anything dynamic ran in a disposable microVM with the network closed by default.
+
+## Indicators
+
+<Collapsible title="Wallets, markers, servers, paths and hashes">
+
+```text
+# pointer wallets
+0x1eEf0849EDa15d87f64e51C73C8442Cf3c8bCEF3   HuntRole script; October npm and GitHub wave
+0xa322E5f3D311D3080e6f0121063e9aDC2490Ef1a   NullReceiver packages, 25 Jul to 19 Oct
+0xee36cc64f82c0b891df975452b91fcbe1b194527   early wallet, 11 to 31 Jul
+
+# treasury
+0xf97062cb1b6ffa18b88e9faea373ed288a87ecd0
+0x4e3e0a353dc7a5c24a133ab246de08a177f6cd4c   new treasury: took the leftovers on 15 Nov, first payout on 16 Nov
+
+# markers: 0x + ip + ip + "helloipbot!!" (68656c6c6f6970626f742121)
+0x5f87b5545f87b55468656c6c6f6970626f742121   95.135.181.84    current on 16 Nov
+0x5f87b5975f87b59768656c6c6f6970626f742121   95.135.181.151
+0x67b38fdb67b38fdb68656c6c6f6970626f742121   103.179.143.219
+0x67b38e9b67b38e9b68656c6c6f6970626f742121   103.179.142.155
+0x171b0d48171b0d4868656c6c6f6970626f742121   23.27.13.72
+0x171b0d87171b0d8768656c6c6f6970626f742121   23.27.13.135
+0xa658864ba658864b68656c6c6f6970626f742121   166.88.134.75
+0xa658863ea658863e68656c6c6f6970626f742121   166.88.134.62
+0xa658492ea658492e68656c6c6f6970626f742121   166.88.73.46
+0xc1f79026c1f7902668656c6c6f6970626f742121   193.247.144.38
+0x5bdab7ae5bdab7ae68656c6c6f6970626f742121   91.218.183.174
+
+# test markers, not routable, halves differ
+0xfc15202df10b150b68656c6c6f6970626f742121   252.21.32.45 / 241.11.21.11
+0x646479162d0c1f0b68656c6c6f6970626f742121   100.100.121.22 / 45.12.31.11
+
+# domains and hosts
+huntrole.com        careers site, Vercel
+jobs.huntrole.com   Vercel
+huntrole.org        sender domain, registered 2026-11-03
+api.huntrole.com    23.27.22.119, Evoxt
+amir.sha@huntrole.org   sender address
+
+# extension
+huntrole.assessment-tool 1.0.0
+VSIX SHA-256 26761cc3bc24fde4aaf89fc0fc3cf8fbfb7bfb5e4961e85cf3c9f9e7732174bd
+
+# extension API
+/api/v1/careers/generate-rand-coding
+/api/v1/devices/register  /api/v1/devices/bind-ticket  /api/v1/devices/verify-ticket
+/socket/presence
+headers: x-hostname  x-machine-id  x-local-candidate
+
+# server paths
+/0x/cls  /0x/ls  /0x/clb  /$/boot  /$/1  /u/e  /u/f  /verify-human/<channel>
+header: X-Payload-B64
+
+# chain is read through
+eth.blockscout.com/api  1rpc.io/eth  eth.drpc.org
+ethereum-rpc.publicnode.com  eth-mainnet.public.blastapi.io
+
+# XOR keys
+/0x/cls         q4FZkxX{!h,Sr3=@
+/0x/ls          y-p_>d$0B&@^1aQk
+loader strings  em0ZJl7uATsA
+
+# persistence
+~/.node_modules/.npm-ws.json
+~/.node_modules/.npm-ws.pid
+~/.node_modules/.npm-ws-runner.js
+*.inz.cjs  *.inz.orig  *.inz.tmp
+
+# SHA-256 after decoding
+script (verified)  23bc5f13eacfd14eb7dbf370a147a4d040a1e95f6c7d49262dcf2eac36f50fc4
+remote-access tool 8252068e04cad13c326fb7b833c4db8f45522a52984b7315c089b8b914babce1
+/0x/cls            dc45f264c338c024b67c666cea25ffb247e0e4261cf40af6a4ddd2627ccc722f
+/0x/ls             228f3c5924325161c398a6c2b66334397b850b6d9248fd1a6ccd65ba1b567eda
+/$/boot            a4a9426cea9670d1acc19f263f874fb486c8650540392a517f2d431f0ce94609
+/$/1 (python)      9e842de8444b8513cd93e654c913297e1a84237a21a52d511c12a96a824f44a5
+injector           ff57ef4999470c3bce2224360f6e216b795e78d4eb8d0e1fb2ae8f9eff95cdb6
+```
+
+</Collapsible>
+
+## Sources
+
+- [JFrog, 9 November 2026](https://research.jfrog.com/post/accurasofthire-fake-interview/): AccuraSoftHire.
+- [Sonatype, 4 November](https://www.sonatype.com/blog/polinrider-loader-reappears-in-hijacked-npm-packages), [OX Security](https://www.ox.security/blog/polinrider-returns-hijacked-npm-packages-use-ethereum-blockchain-to-conceal-malware-infrastructure/) and [GitGuardian, 27 October](https://blog.gitguardian.com/ghostaction-x-polinrider): the October npm wave.
+- [BlueCyber, 18 October](https://bluecyber.hashnode.dev/etherrat-malware-bootcamp2026), in Vietnamese: the second wallet's history.
+- [SafeDep, 30 September](https://safedep.io/blog/polinrider-ethereum-c2-github-repositories): a related pointer wallet.
+- [The Hacker News, 5 August](https://thehackernews.com/2026/08/trojanized-npm-packages-decode-c2-ip.html): NullReceiver.
+- [Socket, 28 July](https://socket.dev/blog/joyfill-npm-beta-releases-compromised): the command set and the Python stage.
+- [eSentire, 5 March](https://www.esentire.com/blog/north-korean-apt-malware-analysis-dev-popper-rat-and-omnistealer-everyday-im-shufflin): attribution of a related incident.
+- [rr-research](https://github.com/rr-research/polinrider-analysis), [Chollima Hunter](https://chollimahunter.github.io/indicators/wallet-address-8e75ec5a80a2/) and [greenflagged](https://blog.greenflagged.dev/posts/2026-11-03-adminide-stack-eth-dead-drop/): cross-checks.
+- The Binance theft: BleepingComputer on [the FBI's attribution](https://www.bleepingcomputer.com/news/security/fbi-links-63-billion-binance-crypto-heist-to-north-korean-hackers/) and on [Binance's account](https://www.bleepingcomputer.com/news/security/binance-says-fake-job-interview-led-to-63-billion-crypto-heist/); the FBI's address list from a [public copy](https://github.com/shapeshift/unchained/blob/739b4cbf41/node/proxy/api/src/ofac.ts).
+- Data: [OSV](https://osv.dev), [OpenSSF malicious-packages](https://github.com/ossf/malicious-packages), [Blockscout](https://eth.blockscout.com), Routescan, public RPC nodes and the VS Marketplace API.

@@ -1,0 +1,307 @@
+---
+import Figure from "./Figure.astro";
+
+interface Props {
+  installs: number;
+  installsDate: string;
+}
+
+const { installs, installsDate } = Astro.props;
+
+const stages = [
+  {
+    name: "Email",
+    where: "huntrole.org",
+    text: "A recruiter persona offers a remote DevOps role and a take-home test that runs inside VS Code. The message quotes my public work history.",
+    facts: [
+      "Sender domain registered on 3 November, seven days before the email",
+      "Namecheap private mail, DMARC policy set to none",
+      "iCloud had already flagged it as spam",
+    ],
+  },
+  {
+    name: "Careers site",
+    where: "jobs.huntrole.com, on Vercel",
+    text: "A plausible careers site with an application form. It asks for a PDF resume, answers with a ticket ID and promises the test link by email. The site never serves the test itself.",
+    facts: [
+      "Domain registered on 24 August",
+      "A made-up candidate got a ticket within one request",
+      "The link to the test only ever arrives by email",
+    ],
+  },
+  {
+    name: "VS Code extension",
+    where: "Visual Studio Marketplace",
+    text: "The test is an extension, huntrole.assessment-tool 1.0.0. It activates on every editor start, with no action from you, sends your hostname and VS Code machine ID to api.huntrole.com and keeps a presence WebSocket open.",
+    facts: [
+      "Published on 21 October, one version only",
+      `${installs} installs on ${installsDate}, still listed`,
+      "No implant in the package: it is a lure plus telemetry",
+    ],
+  },
+  {
+    name: "Coding task",
+    where: "api.huntrole.com",
+    text: "Opening the assessment panel fetches a task with two fields. One is typed out on screen for you to read. The other is handed to new Function together with Node's require and process, and the two do not have to match.",
+    facts: [
+      "Executed field: 150 bytes before the device registers",
+      "8,665 bytes after it registers and comes online",
+      "Displayed field: identical in both answers",
+    ],
+  },
+  {
+    name: "Ethereum pointer",
+    where: "public blockchain",
+    text: "The hidden loader does not contain a server address. It asks public Ethereum nodes for the latest transaction sent by one wallet and reads the address of the recipient. The first four bytes of that address are an IPv4 address.",
+    facts: [
+      "Three wallets, 13 marker addresses, 1,157 transactions",
+      "A new server costs the operator one zero-value transaction",
+      "Nothing to take down: the pointer lives on a public chain",
+    ],
+  },
+  {
+    name: "RAT and stealer",
+    where: "the server from step 5",
+    text: "That server hands out a JavaScript remote-access tool that talks socket.io, and a Python stealer that goes after browser data, keychains, Git credentials and wallet files. The RAT can also write itself into npm and into Electron apps.",
+    facts: [
+      "RAT is byte-identical to a published DEV#POPPER sample",
+      "Plain HTTP on port 443, payload also offered in a header",
+      "Removing the extension does not undo the persistence",
+    ],
+  },
+];
+---
+
+<Figure
+  title="From inbox to remote shell in six steps"
+  lede="Pick a step. Everything below was read from files and public records; none of it was run."
+>
+  <div class="kc" data-kc>
+    <div class="kc__rail" role="tablist" aria-label="Attack chain steps">
+      <div class="kc__line" aria-hidden="true"><span class="kc__fill" data-kc-fill></span></div>
+      {
+        stages.map((s, i) => (
+          <button
+            class="kc__step"
+            role="tab"
+            type="button"
+            id={`kc-tab-${i}`}
+            aria-selected={i === 0 ? "true" : "false"}
+            aria-controls="kc-panel"
+            tabindex={i === 0 ? 0 : -1}
+            data-kc-step={i}
+          >
+            <span class="kc__num">{i + 1}</span>
+            <span class="kc__name">{s.name}</span>
+            <span class="kc__where">{s.where}</span>
+          </button>
+        ))
+      }
+    </div>
+    <div class="kc__panel" id="kc-panel" role="tabpanel" aria-live="polite">
+      {
+        stages.map((s, i) => (
+          <div class="kc__detail" data-kc-detail={i} hidden={i !== 0}>
+            <div class="kc__text">{s.text}</div>
+            <div class="kc__facts">
+              {s.facts.map((f) => (
+                <div class="kc__fact">{f}</div>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</Figure>
+
+<style>
+  .kc__rail {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.9rem 0.5rem;
+  }
+
+  .kc__line {
+    display: none;
+  }
+
+  @media (min-width: 760px) {
+    .kc__rail {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+
+    .kc__line {
+      display: block;
+      position: absolute;
+      left: calc(100% / 12);
+      right: calc(100% / 12);
+      top: 15px;
+      height: 2px;
+      background: var(--hr-line);
+    }
+
+    .kc__fill {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--hr-ink);
+      transition: width 0.45s cubic-bezier(0.3, 0.7, 0.2, 1);
+    }
+  }
+
+  .kc .kc__step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0 0.2rem 0.3rem;
+    background: none;
+    border: none;
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+
+  .kc__num {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--hr-line-strong);
+    background: var(--hr-surface);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--hr-ink-2);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .kc__step.is-done .kc__num {
+    border-color: var(--hr-ink);
+    color: var(--hr-ink);
+  }
+
+  .kc__step[aria-selected="true"] .kc__num {
+    background: var(--hr-ink);
+    border-color: var(--hr-ink);
+    color: #fff;
+  }
+
+  .kc__step:hover .kc__num {
+    border-color: var(--hr-ink);
+  }
+
+  .kc__name {
+    margin-top: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25;
+  }
+
+  .kc__where {
+    font-size: 0.6875rem;
+    line-height: 1.3;
+    color: var(--hr-muted);
+  }
+
+  .kc__panel {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--hr-line);
+    min-height: 9.5rem;
+  }
+
+  .kc__detail {
+    display: grid;
+    gap: 0.9rem 2rem;
+  }
+
+  .kc__detail[hidden] {
+    display: none;
+  }
+
+  @media (min-width: 760px) {
+    .kc__detail {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    }
+  }
+
+  .kc__text {
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--hr-ink);
+  }
+
+  .kc__facts {
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+  }
+
+  .kc__fact {
+    position: relative;
+    padding-left: 0.9rem;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--hr-ink-2);
+  }
+
+  .kc__fact::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 0.4rem;
+    height: 2px;
+    background: var(--hr-line-strong);
+  }
+</style>
+
+<script>
+  function initKillChain() {
+    document.querySelectorAll<HTMLElement>("[data-kc]").forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = "1";
+      const steps = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-kc-step]"));
+      const details = Array.from(root.querySelectorAll<HTMLElement>("[data-kc-detail]"));
+      const fill = root.querySelector<HTMLElement>("[data-kc-fill]");
+
+      function select(i: number, focus = false) {
+        steps.forEach((s, j) => {
+          s.setAttribute("aria-selected", j === i ? "true" : "false");
+          s.tabIndex = j === i ? 0 : -1;
+          s.classList.toggle("is-done", j < i);
+        });
+        details.forEach((d, j) => (d.hidden = j !== i));
+        if (fill) fill.style.width = `${(i / (steps.length - 1)) * 100}%`;
+        if (focus) steps[i].focus();
+      }
+
+      steps.forEach((s, i) => {
+        s.addEventListener("click", () => select(i));
+        s.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            e.preventDefault();
+            select((i + 1) % steps.length, true);
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            e.preventDefault();
+            select((i + steps.length - 1) % steps.length, true);
+          }
+        });
+      });
+    });
+  }
+
+  initKillChain();
+  document.addEventListener("astro:page-load", initKillChain);
+</script>

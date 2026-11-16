@@ -1,0 +1,312 @@
+---
+import Figure from "./Figure.astro";
+
+const shown = [
+  "const search = (xs, target) => {",
+  "  let lo = 0;",
+  "  let hi = xs.length - 1;",
+  "  while (lo <= hi) {",
+  "    const mid = (lo + hi) >> 1;",
+  "    if (xs[mid] === target) return mid;",
+  "    if (xs[mid] < target) lo = mid + 1;",
+  "    else hi = mid - 1;",
+  "  }",
+  "  return -1;",
+  "};",
+  "const result = search([1, 3, 5, 8, 13], 8);",
+];
+const extra = 'console.log("result:", result);';
+
+let seed = 20261110;
+function rnd() {
+  seed = (seed * 1664525 + 1013904223) % 4294967296;
+  return seed / 4294967296;
+}
+const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$";
+const tokens = ["(function(_0x", "){const ", "=[", "'", "',", "];return ", "^", "[", "]", "atob(", ")", ";", "0x", "=>", "!![]", "+"];
+let noise = "";
+while (noise.length < 1500) {
+  if (rnd() < 0.32) noise += tokens[Math.floor(rnd() * tokens.length)];
+  else {
+    const n = 3 + Math.floor(rnd() * 9);
+    for (let i = 0; i < n; i++) noise += alphabet[Math.floor(rnd() * alphabet.length)];
+  }
+}
+const BEFORE = 150;
+const AFTER = 8665;
+---
+
+<Figure
+  title="One task, two scripts"
+  lede="The server decides what you read and what your machine runs, separately. Switch the device state to see what changes."
+>
+  <div class="ss" data-ss data-state="fresh" data-before={BEFORE} data-after={AFTER}>
+    <div class="ss__switch" role="group" aria-label="Device state">
+      <button class="hr-btn" type="button" data-ss-set="fresh" aria-pressed="true">Unknown device</button>
+      <button class="hr-btn" type="button" data-ss-set="known" aria-pressed="false">Registered and online</button>
+    </div>
+
+    <div class="ss__panes">
+      <div class="ss__pane">
+        <div class="ss__label">
+          <span class="ss__field hr-mono">displayScript</span>
+          <span class="ss__role">typed out in the panel for you to read</span>
+        </div>
+        <div class="ss__code hr-mono">
+          {shown.map((l) => <div class="ss__ln">{l || " "}</div>)}
+        </div>
+      </div>
+
+      <div class="ss__pane ss__pane--run">
+        <div class="ss__label">
+          <span class="ss__field hr-mono">script</span>
+          <span class="ss__role">passed to <span class="hr-mono">new Function()</span> with <span class="hr-mono">require</span> and <span class="hr-mono">process</span></span>
+        </div>
+        <div class="ss__code hr-mono">
+          {shown.map((l) => <div class="ss__ln">{l || " "}</div>)}
+          <div class="ss__ln ss__ln--extra">{extra}</div>
+          <div class="ss__blob" aria-hidden="true">{noise}</div>
+          <div class="ss__blobnote">
+            One more line follows: an obfuscated loader, about 8.3 kB. The text above is placeholder noise. The real code is not reproduced here.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ss__meter">
+      <div class="ss__meterhead">
+        <span>Size of the executed field</span>
+        <span class="ss__bytes"><span data-ss-bytes>{BEFORE}</span> bytes</span>
+      </div>
+      <div class="ss__track"><div class="ss__bar" data-ss-bar style={`width:${(BEFORE / AFTER) * 100}%`}></div></div>
+      <div class="ss__meterfoot" data-ss-foot>
+        A harmless example and nothing else. The displayed field is the same text without the last line.
+      </div>
+    </div>
+  </div>
+  <Fragment slot="caption">
+    Sizes are from two snapshots of the same endpoint, taken minutes apart with a synthetic device. The readable code
+    is my stand-in for a benign task from a third capture.
+  </Fragment>
+</Figure>
+
+<style>
+  .ss__switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .ss__panes {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 760px) {
+    .ss__panes {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+
+  .ss__pane {
+    border: 1px solid var(--hr-line);
+    border-radius: 6px;
+    overflow: hidden;
+    min-width: 0;
+    transition: border-color 0.3s ease;
+  }
+
+  .ss__label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.15rem 0.6rem;
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--hr-line);
+    background: var(--hr-wash);
+  }
+
+  .ss__field {
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .ss__role {
+    font-size: 0.72rem;
+    color: var(--hr-ink-2);
+  }
+
+  .ss__code {
+    position: relative;
+    padding: 0.7rem 0.8rem;
+    font-size: clamp(0.55rem, 2.7vw, 0.68rem);
+    line-height: 1.6;
+    overflow: hidden;
+  }
+
+  .ss__ln {
+    white-space: pre;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ss__ln--extra {
+    margin: 0 -0.8rem;
+    padding: 0 0.8rem;
+    background: var(--hr-red-wash);
+    box-shadow: inset 2px 0 0 var(--hr-red);
+  }
+
+  .ss__blob {
+    margin: 0 -0.8rem;
+    padding: 0 0.8rem;
+    max-height: 0;
+    overflow: hidden;
+    word-break: break-all;
+    color: #a03030;
+    background: var(--hr-red-wash);
+    box-shadow: inset 2px 0 0 var(--hr-red);
+    -webkit-mask-image: linear-gradient(to bottom, #000 45%, rgba(0, 0, 0, 0.25));
+    mask-image: linear-gradient(to bottom, #000 45%, rgba(0, 0, 0, 0.25));
+    transition: max-height 0.7s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+
+  .ss__blobnote {
+    margin: 0 -0.8rem -0.7rem;
+    padding: 0 0.8rem;
+    max-height: 0;
+    overflow: hidden;
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    line-height: 1.45;
+    color: #8a2424;
+    background: var(--hr-red-wash);
+    box-shadow: inset 2px 0 0 var(--hr-red);
+    opacity: 0;
+    transition:
+      max-height 0.7s cubic-bezier(0.3, 0.7, 0.2, 1),
+      opacity 0.4s ease 0.3s;
+  }
+
+  .ss[data-state="known"] .ss__pane--run {
+    border-color: var(--hr-red);
+  }
+
+  .ss[data-state="known"] .ss__ln--extra {
+    background: none;
+    box-shadow: none;
+  }
+
+  .ss[data-state="known"] .ss__blob {
+    max-height: 7.6rem;
+  }
+
+  .ss[data-state="known"] .ss__blobnote {
+    max-height: 6rem;
+    padding: 0.5rem 0.8rem 0.65rem;
+    opacity: 1;
+  }
+
+  .ss__meter {
+    margin-top: 1rem;
+  }
+
+  .ss__meterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    font-size: 0.78rem;
+    color: var(--hr-ink-2);
+  }
+
+  .ss__bytes {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--hr-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ss__track {
+    margin-top: 0.4rem;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--hr-wash);
+    overflow: hidden;
+  }
+
+  .ss__bar {
+    height: 100%;
+    min-width: 6px;
+    border-radius: 4px;
+    background: var(--hr-ink-2);
+    transition:
+      width 0.7s cubic-bezier(0.3, 0.7, 0.2, 1),
+      background-color 0.4s ease;
+  }
+
+  .ss[data-state="known"] .ss__bar {
+    background: var(--hr-red);
+  }
+
+  .ss__meterfoot {
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--hr-ink-2);
+    min-height: 2.3em;
+  }
+</style>
+
+<script>
+  const FOOT = {
+    fresh: "A harmless example and nothing else. The displayed field is the same text without the last line.",
+    known: "58 times larger. The displayed field did not change by a single character, so the panel looks exactly the same.",
+  };
+
+  function initScriptSplit() {
+    document.querySelectorAll<HTMLElement>("[data-ss]").forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = "1";
+      const before = Number(root.dataset.before);
+      const after = Number(root.dataset.after);
+      const bar = root.querySelector<HTMLElement>("[data-ss-bar]")!;
+      const bytes = root.querySelector<HTMLElement>("[data-ss-bytes]")!;
+      const foot = root.querySelector<HTMLElement>("[data-ss-foot]")!;
+      const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-ss-set]"));
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let raf = 0;
+
+      function count(from: number, to: number) {
+        cancelAnimationFrame(raf);
+        if (reduce) {
+          bytes.textContent = to.toLocaleString("en-US");
+          return;
+        }
+        const t0 = performance.now();
+        const step = (now: number) => {
+          const k = Math.min(1, (now - t0) / 700);
+          const e = 1 - Math.pow(1 - k, 3);
+          bytes.textContent = Math.round(from + (to - from) * e).toLocaleString("en-US");
+          if (k < 1) raf = requestAnimationFrame(step);
+        };
+        raf = requestAnimationFrame(step);
+      }
+
+      function set(state: "fresh" | "known") {
+        if (root.dataset.state === state) return;
+        root.dataset.state = state;
+        buttons.forEach((b) => b.setAttribute("aria-pressed", b.dataset.ssSet === state ? "true" : "false"));
+        bar.style.width = state === "known" ? "100%" : `${(before / after) * 100}%`;
+        count(state === "known" ? before : after, state === "known" ? after : before);
+        foot.textContent = FOOT[state];
+      }
+
+      buttons.forEach((b) => b.addEventListener("click", () => set(b.dataset.ssSet as "fresh" | "known")));
+    });
+  }
+
+  initScriptSplit();
+  document.addEventListener("astro:page-load", initScriptSplit);
+</script>

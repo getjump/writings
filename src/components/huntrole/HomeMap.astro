@@ -1,0 +1,137 @@
+---
+import Figure from "./Figure.astro";
+
+const reads = [
+  { what: "process.env", note: "every environment variable, saved as _sysenv.json and _sysenv.env: API keys, cloud credentials, tokens" },
+  { what: "Browser profiles", note: "saved passwords, cookies and databases; Firefox profiles and extensions" },
+  { what: "OS secret stores", note: "Windows DPAPI, Linux Secret Service and KWallet. The macOS Keychain query needs a flag the boot stage does not pass" },
+  { what: "~/Library/Keychains/login.keychain-db", mono: true, note: "copied as a file on macOS; a copy is not a decryption" },
+  { what: "~/.git-credentials", mono: true, note: "and ~/.config/git/credentials" },
+  { what: "~/.config/gh/hosts.yml", mono: true, note: "the GitHub CLI token" },
+  { what: "VS Code globalStorage", note: "whatever your extensions keep there" },
+  { what: "Wallet files", note: "Solana id.json, Exodus, Electrum, Ledger, Trezor" },
+  { what: "Password managers", note: "1Password, Bitwarden, KeePass data files" },
+];
+
+const writes = [
+  { what: "~/.node_modules/.npm-ws.json", mono: true, note: "configuration" },
+  { what: "~/.node_modules/.npm-ws.pid", mono: true, note: "process control" },
+  { what: "~/.node_modules/.npm-ws-runner.js", mono: true, note: "the loader itself" },
+  { what: "npm-cli.js, lib/cli.js", mono: true, note: "npm is wrapped, so the runner starts on later npm calls" },
+  { what: "*.inz.cjs", mono: true, note: "a loader dropped next to an Electron app's own code" },
+  { what: "*.inz.orig", mono: true, note: "backup of the file that was patched to load it" },
+  { what: "Electron apps on the list", note: "VS Code, Cursor, Antigravity, Discord, GitHub Desktop; on macOS inside /Applications/.../Contents/Resources/app" },
+];
+---
+
+<Figure
+  title="What gets read and what gets left behind"
+  lede="Two different programs. The Python stage collects and uploads. The JavaScript tool is the one that changes files, and its changes outlive the extension."
+>
+  <div class="hm">
+    <div class="hm__col">
+      <div class="hm__head">
+        <span class="hm__name">Read and uploaded</span>
+        <span class="hm__by">Python stealer, 92.7 kB decoded</span>
+      </div>
+      {
+        reads.map((r) => (
+          <div class="hm__row">
+            <div class:list={["hm__what", { "hr-mono": r.mono }]}>{r.what}</div>
+            <div class="hm__note">{r.note}</div>
+          </div>
+        ))
+      }
+      <div class="hm__foot">
+        Sent with <span class="hr-mono">POST /u/e</span> and <span class="hr-mono">POST /u/f</span>, optionally through
+        Telegram if the server hands out a bot token.
+      </div>
+    </div>
+    <div class="hm__col hm__col--write">
+      <div class="hm__head">
+        <span class="hm__name">Written and kept</span>
+        <span class="hm__by">JavaScript remote-access tool</span>
+      </div>
+      {
+        writes.map((r) => (
+          <div class="hm__row">
+            <div class:list={["hm__what", { "hr-mono": r.mono }]}>{r.what}</div>
+            <div class="hm__note">{r.note}</div>
+          </div>
+        ))
+      }
+      <div class="hm__foot">Uninstalling the extension removes none of this.</div>
+    </div>
+  </div>
+  <Fragment slot="caption">
+    This is what the code tries, read statically. Whether it succeeds on a given machine was not tested.
+  </Fragment>
+</Figure>
+
+<style>
+  .hm {
+    display: grid;
+    gap: 1.5rem 2rem;
+  }
+
+  @media (min-width: 760px) {
+    .hm {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+  }
+
+  .hm__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.1rem 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--hr-ink);
+  }
+
+  .hm__col--write .hm__head {
+    border-bottom-color: var(--hr-red);
+  }
+
+  .hm__name {
+    font-size: 0.84rem;
+    font-weight: 600;
+  }
+
+  .hm__by {
+    font-size: 0.7rem;
+    color: var(--hr-ink-2);
+  }
+
+  .hm__row {
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--hr-line);
+  }
+
+  .hm__what {
+    font-size: 0.76rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .hm__note {
+    margin-top: 0.1rem;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: var(--hr-ink-2);
+  }
+
+  .hm__foot {
+    padding-top: 0.55rem;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    color: var(--hr-ink-2);
+  }
+
+  .hm__col--write .hm__foot {
+    color: #8a2424;
+    font-weight: 500;
+  }
+</style>

@@ -1,0 +1,443 @@
+---
+import Figure from "./Figure.astro";
+import data from "../../data/huntrole.json";
+
+const W = 920;
+const H = 196;
+const GUT = 132;
+const PADR = 14;
+const LO = Math.log10(10);
+const HI = Math.log10(1.2e7);
+const lx = (sec: number) => GUT + ((Math.log10(Math.max(10, sec)) - LO) / (HI - LO)) * (W - GUT - PADR);
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
+const label: Record<string, string> = { early: "Early wallet", second: "Second wallet", main: "HuntRole wallet" };
+const rowY: Record<string, number> = { early: 50, second: 96, main: 142 };
+const TICK = 24;
+
+const rows = data.wallets.map((w) => {
+  const iv = w.pings.slice(1).map((t, i) => t - w.pings[i]);
+  const y = rowY[w.id];
+  const d = iv.map((s) => `M${r1(lx(s))} ${y}v${TICK}`).join("");
+  const max = Math.max(...iv);
+  return { id: w.id, y, d, iv, n: iv.length, max, maxX: r1(lx(max)), maxDays: w.stats.maxGapDays };
+});
+const ivData = Object.fromEntries(rows.map((r) => [r.id, r.iv]));
+
+const axis = [
+  { s: 60, t: "1 min" },
+  { s: 600, t: "10 min" },
+  { s: 3600, t: "1 h" },
+  { s: 86400, t: "1 day" },
+  { s: 864000, t: "10 days" },
+];
+const main = data.wallets.find((w) => w.id === "main")!;
+const second = data.wallets.find((w) => w.id === "second")!;
+const period = main.stats.coreMeanSec as number;
+const guides = [
+  { s: 120, t: "10 blocks, 2 min", y1: 44, y2: 172 },
+  { s: 1200, t: "100 blocks, 20 min", y1: 44, y2: 80 },
+  { s: period, t: "1,000 blocks, 200.6 min", y1: 90, y2: 172 },
+];
+const spread = ((main.stats.coreSdSec as number) / period) * 100;
+
+const CX = 95;
+const CY = 95;
+const R0 = 26;
+const R1 = 72;
+const pt = (r: number, deg: number) => {
+  const a = (deg * Math.PI) / 180;
+  return `${r1(CX + r * Math.sin(a))} ${r1(CY - r * Math.cos(a))}`;
+};
+const sector = (r: number, a0: number, a1: number) =>
+  `M${pt(R0, a0)}L${pt(r, a0)}A${r} ${r} 0 0 1 ${pt(r, a1)}L${pt(R0, a1)}A${R0} ${R0} 0 0 0 ${pt(R0, a0)}Z`;
+const hh = (h: number) => String(h).padStart(2, "0");
+
+const early = data.wallets.find((w) => w.id === "early")!;
+const dials = [
+  {
+    title: "Early wallet",
+    hours: early.hours,
+    unit: "pings",
+    line: `${early.hours[7] + early.hours[8]} of ${early.stats.n} pings fall between 07:00 and 08:59.`,
+  },
+  { title: "Second wallet", hours: second.hours, unit: "pings", line: `${second.stats.n} pings, every hour of the day is used.` },
+  { title: "HuntRole wallet", hours: main.hours, unit: "pings", line: `${main.stats.n} pings, no preferred hour.` },
+  {
+    title: "Treasury",
+    hours: data.treasury.allChains.hours,
+    unit: "signed transactions",
+    line: `${data.treasury.allChains.sent} signed transactions on ${data.treasury.allChains.chains} chains, on ${data.treasury.allChains.days} days. None between 12:00 and 22:59.`,
+  },
+].map((d) => {
+  const max = Math.max(...d.hours);
+  const total = d.hours.reduce((a, b) => a + b, 0);
+  return {
+    ...d,
+    max,
+    wedges: d.hours.map((c, h) => ({
+      h,
+      c,
+      bar: c > 0 ? sector(R0 + ((R1 - R0) * c) / max, h * 15 + 1.3, (h + 1) * 15 - 1.3) : "",
+      hit: sector(R1 + 4, h * 15, (h + 1) * 15),
+      tip: `${hh(h)}:00 to ${hh(h)}:59 UTC|${c} of ${total} ${d.unit}`,
+    })),
+  };
+});
+---
+
+<Figure
+  title="A timer sends the pings. A person pays for them."
+  lede="Top: the gap between consecutive pings, one tick per gap, on a logarithmic scale. Bottom: the hour of day, in UTC, at which each wallet signs."
+>
+  <div class="hb" data-hb data-iv={JSON.stringify(ivData)} data-lo={LO} data-hi={HI} data-gut={GUT} data-padr={PADR} data-w={W}>
+    <div class="hb__tiles">
+      <div class="hb__tile">
+        <div class="hb__num">200.6 min</div>
+        <div class="hb__what">median gap between pings for both long-running wallets: 1,000 Ethereum blocks</div>
+      </div>
+      <div class="hb__tile">
+        <div class="hb__num">{spread.toFixed(1)}%</div>
+        <div class="hb__what">spread of that gap for the HuntRole wallet: {main.stats.coreSdSec} s over {main.stats.coreN} cycles</div>
+      </div>
+      <div class="hb__tile">
+        <div class="hb__num">{main.stats.maxGapDays} days</div>
+        <div class="hb__what">longest silence, 12 Sep to 14 Oct, with gas for roughly a hundred more pings still in the wallet</div>
+      </div>
+    </div>
+
+    <div class="hb__wrap">
+      <div class="hr-scroll">
+        <svg class="hb__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Strip plot of gaps between pings for three wallets on a logarithmic time axis. Most gaps of the second and HuntRole wallets sit at 200.6 minutes, which is 1,000 blocks; the early wallet clusters at 2 and 20 minutes, 10 and 100 blocks.">
+          {
+            axis.map((a) => (
+              <g>
+                <line class="hb__grid" x1={r1(lx(a.s))} x2={r1(lx(a.s))} y1="40" y2={H - 22} />
+                <text class="hb__axis" x={r1(lx(a.s))} y={H - 7} text-anchor="middle">{a.t}</text>
+              </g>
+            ))
+          }
+          {
+            guides.map((g) => (
+              <g>
+                <line class="hb__guide" x1={r1(lx(g.s))} x2={r1(lx(g.s))} y1={g.y1} y2={g.y2} />
+                <text class="hb__guidelabel" x={r1(lx(g.s))} y={g.y1 - 6} text-anchor="middle">{g.t}</text>
+              </g>
+            ))
+          }
+          {
+            rows.map((r) => (
+              <g>
+                <text class="hb__lane" x="0" y={r.y + 11}>{label[r.id]}</text>
+                <text class="hb__sub" x="0" y={r.y + 24}>{r.n} gaps</text>
+                <line class="hb__base" x1={GUT} x2={W - PADR} y1={r.y + TICK} y2={r.y + TICK} />
+                <path class="hb__ticks" d={r.d} />
+                <text class="hb__max" x={r.maxX + 5} y={r.y + 15} text-anchor="start">{r.maxDays} days</text>
+              </g>
+            ))
+          }
+          <line class="hb__cross" data-hb-cross x1="0" x2="0" y1="40" y2={H - 22} />
+          <rect class="hb__hit" data-hb-hit x={GUT} y="36" width={W - GUT - PADR} height={H - 58} />
+        </svg>
+      </div>
+      <div class="hr-tip" role="status"></div>
+    </div>
+
+    <div class="hb__dials" data-hb-dials>
+      {
+        dials.map((d) => (
+          <div class="hb__dial">
+            <svg viewBox="0 0 190 190" role="img" aria-label={`${d.title}: activity by hour of day in UTC. ${d.line}`}>
+              <circle class="hb__ring" cx={CX} cy={CY} r={R1} />
+              <circle class="hb__ring" cx={CX} cy={CY} r={R0} />
+              {d.wedges.map((w) => (
+                <g data-tip={w.tip}>
+                  <path class="hb__wedgehit" d={w.hit} />
+                  {w.bar && <path class="hb__wedge" d={w.bar} />}
+                </g>
+              ))}
+              <text class="hb__hour" x={CX} y={CY - R1 - 8} text-anchor="middle">00</text>
+              <text class="hb__hour" x={CX + R1 + 8} y={CY + 3.5} text-anchor="start">06</text>
+              <text class="hb__hour" x={CX} y={CY + R1 + 16} text-anchor="middle">12</text>
+              <text class="hb__hour" x={CX - R1 - 8} y={CY + 3.5} text-anchor="end">18</text>
+              <text class="hb__peak" x={CX} y={CY + 3.5} text-anchor="middle">{d.max}</text>
+            </svg>
+            <div class="hb__dialtitle">{d.title}</div>
+            <div class="hb__dialline">{d.line}</div>
+          </div>
+        ))
+      }
+      <div class="hr-tip" role="status"></div>
+    </div>
+  </div>
+  <Fragment slot="caption">
+    Each dial is scaled to its own busiest hour; the number in the centre is that hour's count. A timer that fires every
+    200.6 minutes drifts through the clock, so its dial fills evenly. The treasury's dial covers {data.treasury.allChains.days} days.
+  </Fragment>
+</Figure>
+
+<style>
+  .hb__tiles {
+    display: grid;
+    gap: 0.8rem 1.5rem;
+    margin-bottom: 1.1rem;
+  }
+
+  @media (min-width: 700px) {
+    .hb__tiles {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  .hb__tile {
+    padding-left: 0.8rem;
+    border-left: 2px solid var(--hr-ink);
+  }
+
+  .hb__num {
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hb__what {
+    margin-top: 0.15rem;
+    font-size: 0.74rem;
+    line-height: 1.45;
+    color: var(--hr-ink-2);
+  }
+
+  .hb__wrap,
+  .hb__dials {
+    position: relative;
+  }
+
+  .hb__svg {
+    display: block;
+    width: 100%;
+    min-width: 720px;
+    height: auto;
+  }
+
+  .hb__grid {
+    stroke: #efefed;
+    stroke-width: 1;
+  }
+
+  .hb__axis {
+    font-size: 11.5px;
+    fill: var(--hr-muted);
+  }
+
+  .hb__guide {
+    stroke: var(--hr-line-strong);
+    stroke-width: 1;
+  }
+
+  .hb__guidelabel {
+    font-size: 11.5px;
+    font-weight: 600;
+    fill: var(--hr-ink);
+  }
+
+  .hb__lane {
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: var(--hr-ink);
+  }
+
+  .hb__sub {
+    font-size: 11px;
+    fill: var(--hr-muted);
+  }
+
+  .hb__base {
+    stroke: var(--hr-line);
+    stroke-width: 1;
+  }
+
+  .hb__ticks {
+    fill: none;
+    stroke: var(--hr-ink);
+    stroke-width: 1.2;
+    stroke-opacity: 0.3;
+  }
+
+  .hb__max {
+    font-size: 11px;
+    fill: var(--hr-ink-2);
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+  }
+
+  .hb__cross {
+    stroke: var(--hr-ink);
+    stroke-width: 1;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .hb__cross.is-on {
+    opacity: 0.55;
+  }
+
+  .hb__hit {
+    fill: transparent;
+  }
+
+  .hb__dials {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 0.75rem;
+    margin-top: 1.2rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--hr-line);
+  }
+
+  @media (min-width: 760px) {
+    .hb__dials {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .hb__dial svg {
+    display: block;
+    width: 100%;
+    max-width: 190px;
+    margin: 0 auto;
+    height: auto;
+  }
+
+  .hb__ring {
+    fill: none;
+    stroke: var(--hr-line);
+    stroke-width: 1;
+  }
+
+  .hb__wedge {
+    fill: #3d3d3b;
+  }
+
+  .hb__wedgehit {
+    fill: transparent;
+  }
+
+  .hb__dial g:hover .hb__wedgehit {
+    fill: var(--hr-wash);
+  }
+
+  .hb__hour {
+    font-size: 11px;
+    fill: var(--hr-muted);
+  }
+
+  .hb__peak {
+    font-size: 12px;
+    font-weight: 600;
+    fill: var(--hr-ink-2);
+  }
+
+  .hb__dialtitle {
+    margin-top: 0.3rem;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .hb__dialline {
+    margin: 0.15rem auto 0;
+    max-width: 13rem;
+    text-align: center;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    color: var(--hr-ink-2);
+  }
+</style>
+
+<script>
+  import { attachTips } from "./tip";
+
+  function fmtGap(sec: number) {
+    if (sec < 90) return `${Math.round(sec)} s`;
+    if (sec < 5400) return `${Math.round(sec / 60)} min`;
+    if (sec < 129600) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.round((sec % 3600) / 60);
+      return m ? `${h} h ${m} min` : `${h} h`;
+    }
+    return `${(sec / 86400).toFixed(1)} days`;
+  }
+
+  function initHeartbeat() {
+    document.querySelectorAll<HTMLElement>("[data-hb]").forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = "1";
+      const dials = root.querySelector<HTMLElement>("[data-hb-dials]");
+      if (dials) attachTips(dials);
+
+      const iv: Record<string, number[]> = JSON.parse(root.dataset.iv || "{}");
+      const lo = Number(root.dataset.lo);
+      const hi = Number(root.dataset.hi);
+      const gut = Number(root.dataset.gut);
+      const padr = Number(root.dataset.padr);
+      const vw = Number(root.dataset.w);
+      const wrap = root.querySelector<HTMLElement>(".hb__wrap")!;
+      const svg = root.querySelector<SVGSVGElement>(".hb__svg")!;
+      const hit = root.querySelector<SVGRectElement>("[data-hb-hit]")!;
+      const cross = root.querySelector<SVGLineElement>("[data-hb-cross]")!;
+      const tip = wrap.querySelector<HTMLElement>(".hr-tip")!;
+      const names: [string, string][] = [
+        ["early", "Early wallet"],
+        ["second", "Second wallet"],
+        ["main", "HuntRole wallet"],
+      ];
+
+      const hide = () => {
+        tip.classList.remove("is-on");
+        cross.classList.remove("is-on");
+      };
+
+      const move = (e: PointerEvent) => {
+        const box = svg.getBoundingClientRect();
+        const vx = ((e.clientX - box.left) / box.width) * vw;
+        if (vx < gut || vx > vw - padr) {
+          hide();
+          return;
+        }
+        const sec = Math.pow(10, lo + ((vx - gut) / (vw - gut - padr)) * (hi - lo));
+        cross.setAttribute("x1", String(vx));
+        cross.setAttribute("x2", String(vx));
+        cross.classList.add("is-on");
+        tip.replaceChildren();
+        const head = document.createElement("div");
+        const b = document.createElement("b");
+        b.textContent = `Gaps of about ${fmtGap(sec)}`;
+        head.append(b);
+        tip.append(head);
+        names.forEach(([id, name]) => {
+          const n = (iv[id] || []).filter((s) => s > sec * 0.92 && s < sec * 1.08).length;
+          const row = document.createElement("div");
+          row.className = "hr-tip__dim";
+          row.textContent = `${name}: ${n}`;
+          tip.append(row);
+        });
+        const wbox = wrap.getBoundingClientRect();
+        tip.classList.add("is-on");
+        let left = e.clientX - wbox.left + 14;
+        if (left + tip.offsetWidth > wbox.width - 4) left = e.clientX - wbox.left - tip.offsetWidth - 14;
+        tip.style.left = `${Math.max(4, left)}px`;
+        tip.style.top = `${Math.max(0, e.clientY - wbox.top - tip.offsetHeight - 12)}px`;
+      };
+
+      hit.addEventListener("pointermove", move);
+      hit.addEventListener("pointerdown", move);
+      hit.addEventListener("pointerleave", hide);
+    });
+  }
+
+  initHeartbeat();
+  document.addEventListener("astro:page-load", initHeartbeat);
+</script>

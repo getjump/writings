@@ -1,0 +1,313 @@
+---
+interface Props {
+  title?: string;
+  lede?: string;
+  id?: string;
+  flush?: boolean;
+}
+
+const { title, lede, id, flush = false } = Astro.props;
+---
+
+<figure class:list={["hr-fig", { "hr-fig--flush": flush }]} id={id}>
+  <div class="hr-fig__frame">
+    {
+      (title || lede) && (
+        <div class="hr-fig__head">
+          {title && <div class="hr-fig__title">{title}</div>}
+          {lede && <div class="hr-fig__lede">{lede}</div>}
+        </div>
+      )
+    }
+    <div class="hr-fig__body">
+      <slot />
+    </div>
+  </div>
+  {
+    Astro.slots.has("caption") && (
+      <figcaption class="hr-fig__caption">
+        <slot name="caption" />
+      </figcaption>
+    )
+  }
+</figure>
+
+<style is:global>
+  .hr-fig {
+    --hr-surface: #ffffff;
+    --hr-ink: #1a1a1a;
+    --hr-ink-2: #555555;
+    --hr-muted: #888888;
+    --hr-line: #e5e5e3;
+    --hr-line-strong: #c9c9c5;
+    --hr-wash: #f4f4f2;
+    --hr-blue: #2a78d6;
+    --hr-blue-wash: #e9f1fb;
+    --hr-orange: #eb6834;
+    --hr-orange-wash: #fdefe8;
+    --hr-aqua: #1baf7a;
+    --hr-gray: #a8a8a6;
+    --hr-red: #d03b3b;
+    --hr-red-wash: #fbecec;
+    margin: 2.25em 0;
+    font-family: var(--font-heading);
+    color: var(--hr-ink);
+  }
+
+  .hr-fig__frame {
+    background: var(--hr-surface);
+    border: 1px solid var(--hr-line);
+    border-radius: 8px;
+    padding: 1.1rem 1rem 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .hr-fig__frame {
+      padding: 1.35rem 1.5rem 1.25rem;
+    }
+  }
+
+  .hr-fig--flush .hr-fig__frame {
+    background: transparent;
+    border: none;
+    padding: 0;
+  }
+
+  .hr-fig__head {
+    margin-bottom: 1rem;
+    max-width: 44rem;
+  }
+
+  .hr-fig__title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.35;
+  }
+
+  .hr-fig__lede {
+    margin-top: 0.2rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--hr-ink-2);
+  }
+
+  .hr-fig__caption {
+    margin-top: 0.6rem;
+    padding: 0 0.15rem;
+    font-size: 0.75rem;
+    line-height: 1.55;
+    color: var(--hr-muted);
+    max-width: 46rem;
+  }
+
+  .hr-fig .hr-mono {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    letter-spacing: -0.01em;
+  }
+
+  .hr-fig .hr-btn {
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--hr-ink);
+    background: var(--hr-surface);
+    border: 1px solid var(--hr-line-strong);
+    border-radius: 6px;
+    padding: 0.45em 0.8em;
+    cursor: pointer;
+    transition:
+      background-color 0.12s ease,
+      border-color 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .hr-fig .hr-btn:hover {
+    background: var(--hr-wash);
+  }
+
+  .hr-fig .hr-btn[aria-pressed="true"],
+  .hr-fig .hr-btn[aria-selected="true"] {
+    background: var(--hr-ink);
+    border-color: var(--hr-ink);
+    color: #fff;
+  }
+
+  .hr-fig .hr-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .hr-fig button:focus-visible,
+  .hr-fig input:focus-visible,
+  .hr-fig summary:focus-visible,
+  .hr-fig [tabindex]:focus-visible {
+    outline: 2px solid var(--hr-ink);
+    outline-offset: 2px;
+  }
+
+  .prose div.hr-tscroll {
+    margin: 1.42rem 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .prose div.hr-tscroll > table {
+    margin: 0;
+  }
+
+  @media (max-width: 619px) {
+    .prose div.hr-tscroll--stack thead {
+      display: none;
+    }
+
+    .prose div.hr-tscroll--stack tr {
+      display: block;
+      padding: 0.7em 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .prose div.hr-tscroll--stack tr:last-child {
+      border-bottom: none;
+    }
+
+    .prose div.hr-tscroll--stack tr td {
+      display: block;
+      padding: 0.1em 0;
+      border-bottom: none;
+    }
+
+    .prose div.hr-tscroll--stack td code {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .hr-fig .hr-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hr-fig .hr-scroll.is-overflowing::before {
+    content: "Scroll sideways for the rest of the chart";
+    position: sticky;
+    left: 0;
+    display: block;
+    width: max-content;
+    margin-bottom: 0.5rem;
+    padding: 0.15rem 0.5rem;
+    font-family: var(--font-heading);
+    font-size: 0.66rem;
+    color: var(--hr-ink-2);
+    background: var(--hr-wash);
+    border-radius: 999px;
+  }
+
+  .hr-fig .hr-tip {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    background: var(--hr-ink);
+    color: #fff;
+    border-radius: 6px;
+    padding: 0.5em 0.7em;
+    font-size: 0.72rem;
+    line-height: 1.5;
+    width: max-content;
+    max-width: min(21rem, 78vw);
+    left: 0;
+    top: 0;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+    opacity: 0;
+    transition: opacity 0.1s ease;
+  }
+
+  .hr-fig .hr-tip.is-on {
+    opacity: 1;
+  }
+
+  .hr-fig .hr-tip b {
+    font-weight: 600;
+  }
+
+  .hr-fig .hr-tip .hr-tip__dim {
+    color: #b9b9b5;
+  }
+
+  .hr-fig .hr-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 1.1rem;
+    font-size: 0.75rem;
+    color: var(--hr-ink-2);
+  }
+
+  .hr-fig .hr-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  .hr-fig .hr-swatch {
+    width: 0.85em;
+    height: 0.85em;
+    border-radius: 2px;
+    flex: none;
+  }
+
+  .hr-fig details.hr-table {
+    margin-top: 0.9rem;
+    font-size: 0.75rem;
+  }
+
+  .hr-fig details.hr-table > summary {
+    cursor: pointer;
+    color: var(--hr-ink-2);
+    font-weight: 500;
+    width: fit-content;
+  }
+
+  .hr-fig details.hr-table .hr-table__wrap {
+    overflow-x: auto;
+    margin-top: 0.5rem;
+  }
+
+  .hr-fig details.hr-table table {
+    margin: 0;
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hr-fig details.hr-table td,
+  .hr-fig details.hr-table th {
+    padding: 0.35em 0.7em 0.35em 0;
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hr-fig *,
+    .hr-fig *::before,
+    .hr-fig *::after {
+      animation-duration: 0.001s !important;
+      animation-delay: 0s !important;
+      transition-duration: 0.001s !important;
+    }
+  }
+</style>
+
+<script>
+  function initScrollHints() {
+    document.querySelectorAll<HTMLElement>(".hr-fig .hr-scroll").forEach((el) => {
+      if (el.dataset.hrScrollReady) return;
+      el.dataset.hrScrollReady = "1";
+      const update = () => el.classList.toggle("is-overflowing", el.scrollWidth > el.clientWidth + 1);
+      update();
+      new ResizeObserver(update).observe(el);
+    });
+  }
+
+  initScrollHints();
+  document.addEventListener("astro:page-load", initScrollHints);
+</script>

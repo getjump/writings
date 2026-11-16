@@ -1,0 +1,476 @@
+---
+import Figure from "./Figure.astro";
+import data from "../../data/huntrole.json";
+
+const W = 920;
+const H = 308;
+const GUT = 132;
+const PADR = 14;
+const BAR = 14;
+const T0 = Date.UTC(2026, 5, 18) / 1000;
+const T1 = Date.UTC(2026, 10, 19) / 1000;
+const x = (ts: number) => GUT + ((ts - T0) / (T1 - T0)) * (W - GUT - PADR);
+const day = (iso: string) => Date.parse(iso + "T12:00:00Z") / 1000;
+const r1 = (n: number) => Math.round(n * 10) / 10;
+const fmt = (ts: number) =>
+  new Date(ts * 1000).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+const fmtDay = (ts: number) =>
+  new Date(ts * 1000).toLocaleString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+type Provider = { name: string; asn: string };
+const providers = data.providers as Record<string, Provider>;
+const fill: Record<string, string> = {
+  evoxt: "var(--hr-blue)",
+  virtuo: "var(--hr-orange)",
+  test: "var(--hr-gray)",
+};
+
+const months = [6, 7, 8, 9, 10].map((m) => ({
+  ts: Date.UTC(2026, m, 1) / 1000,
+  label: new Date(Date.UTC(2026, m, 1)).toLocaleString("en-GB", { month: "short", timeZone: "UTC" }),
+}));
+
+type Ev = { d: string; tip: string; label?: string; side?: "left" | "right" };
+const eventLanes: { name: string; y: number; events: Ev[] }[] = [
+  {
+    name: "Public reports",
+    y: 44,
+    events: [
+      { d: "2026-07-28", tip: "Socket|compromised npm beta releases, JavaScript stage named DEV#POPPER", label: "Socket", side: "left" },
+      { d: "2026-08-05", tip: "The Hacker News, OpenSourceMalware|the scheme gets the name NullReceiver; second wallet published", label: "NullReceiver named", side: "right" },
+      { d: "2026-09-30", tip: "SafeDep|PolinRider repositories resolving a server through Ethereum", label: "SafeDep", side: "right" },
+      { d: "2026-10-27", tip: "GitGuardian|wallet 0x1eef0849 published as the loader's resolver", label: "GitGuardian", side: "left" },
+      { d: "2026-11-04", tip: "Sonatype|the same wallet, server and paths in hijacked npm packages", label: "Sonatype", side: "right" },
+    ],
+  },
+  {
+    name: "Malicious packages",
+    y: 76,
+    events: [
+      { d: "2026-06-24", tip: "npm fetch-page-assets 1.2.9 to 1.2.16|advisory MAL-2026-6358 opened, amended until 9 Sep", label: "fetch-page-assets", side: "right" },
+      { d: "2026-07-28", tip: "npm bianira-ui and fluid-type-ui|published with the second wallet inside", },
+      { d: "2026-08-05", tip: "npm devpack-conf 5.0.0|MAL-2026-12177, typosquat of pkg-conf" },
+      { d: "2026-08-10", tip: "npm godot-kit|MAL-2026-13723, one malicious version" },
+      { d: "2026-08-12", tip: "npm envpack-conf 1.0.1|MAL-2026-13921" },
+      { d: "2026-08-26", tip: "PyPI pybitjs 0.1.0|MAL-2026-14545, runs Node during pip install" },
+      { d: "2026-08-31", tip: "PyPI pyservercheck 0.1.0 and 0.1.1|MAL-2026-15603", label: "two PyPI packages", side: "right" },
+    ],
+  },
+  {
+    name: "HuntRole front",
+    y: 108,
+    events: [
+      { d: "2026-08-24", tip: "huntrole.com registered|careers site on Vercel", label: "huntrole.com registered", side: "right" },
+      { d: "2026-10-21", tip: "Extension published|huntrole.assessment-tool 1.0.0 on the VS Code Marketplace; API certificate issued three days earlier", label: "extension published", side: "left" },
+      { d: "2026-11-03", tip: "huntrole.org registered|the domain the recruiter email is sent from" },
+      { d: "2026-11-10", tip: "The email|arrives a week after the sender domain was registered" },
+    ],
+  },
+];
+
+const walletY: Record<string, number> = { early: 152, second: 206, main: 260 };
+const walletLabel: Record<string, string> = {
+  early: "Early wallet",
+  second: "Second wallet",
+  main: "HuntRole wallet",
+};
+const short = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
+
+const sourceName = (from: string) => {
+  if (from === "fixedfloat") return "FixedFloat hot wallet";
+  if (from.startsWith("0xf97062cb")) return "the treasury";
+  if (from === "relay") return "a relay wallet";
+  if (from === "lifi") return "a swap routed through LI.FI";
+  if (from === "short-lived") return "0x96c8e62c...";
+  return "another wallet";
+};
+
+const lanes = data.wallets.map((w) => {
+  const runs: { ip: string; provider: string; start: number; end: number; n: number }[] = [];
+  let i = 0;
+  for (const s of w.segments) {
+    const ts = w.pings.slice(i, i + s.n);
+    i += s.n;
+    let start = ts[0];
+    let prev = ts[0];
+    let n = 1;
+    for (let k = 1; k < ts.length; k++) {
+      if (ts[k] - prev > 64800) {
+        runs.push({ ip: s.ip, provider: s.provider, start, end: prev, n });
+        start = ts[k];
+        n = 0;
+      }
+      prev = ts[k];
+      n++;
+    }
+    runs.push({ ip: s.ip, provider: s.provider, start, end: prev, n });
+  }
+  const y = walletY[w.id];
+  let lastRight = 0;
+  const bars = runs.map((r, idx) => {
+    const x1 = x(r.start);
+    const width = Math.max(4, x(r.end) - x1);
+    const text = "." + r.ip.split(".")[3];
+    const tw = text.length * 6.5;
+    let label = "";
+    let cx = x1 + width / 2;
+    if (idx === 0 || runs[idx - 1].ip !== r.ip) {
+      let last = idx;
+      while (last + 1 < runs.length && runs[last + 1].ip === r.ip) last++;
+      const span = Math.max(4, x(runs[last].end) - x1);
+      const gx = x1 + span / 2;
+      if (span >= 10 && gx - tw / 2 > lastRight + 3) {
+        label = text;
+        cx = gx;
+        lastRight = gx + tw / 2;
+      }
+    }
+    const p = providers[r.provider];
+    const where = r.provider === "test" ? "not routable, test marker" : `${p.name}, ${p.asn}`;
+    const span = r.n === 1 ? fmt(r.start) + " UTC" : `${fmt(r.start)} to ${fmt(r.end)} UTC`;
+    return {
+      ...r,
+      x1: r1(x1),
+      width: r1(width),
+      cx: r1(cx),
+      label,
+      delay: r1(((r.start - T0) / (T1 - T0)) * 1.3),
+      tip: `${r.ip}|${where}|${r.n} ping${r.n === 1 ? "" : "s"}, ${span}|${walletLabel[w.id]}`,
+    };
+  });
+  const funding = [...w.funding];
+  if (w.id === "main") funding.push({ ts: Date.UTC(2026, 8, 4, 5, 10) / 1000, from: "lifi", eth: 0.011469 });
+  const tops = funding
+    .filter((f) => f.eth >= 0.001)
+    .map((f) => ({
+      x: r1(x(f.ts)),
+      treasury: f.from.startsWith("0xf97062cb"),
+      tip: `Top-up of ${f.eth.toFixed(4)} ETH|from ${sourceName(f.from)}|${fmt(f.ts)} UTC`,
+    }));
+  return { id: w.id, y, bars, tops, address: w.address };
+});
+
+const emailX = r1(x(day("2026-11-10")));
+const bandX1 = r1(x(Date.UTC(2026, 9, 13, 12) / 1000));
+const bandX2 = r1(x(Date.UTC(2026, 9, 16, 18) / 1000));
+
+const rows = data.wallets.flatMap((w) =>
+  w.segments.map((s) => ({
+    wallet: walletLabel[w.id],
+    ip: s.ip,
+    provider: s.provider === "test" ? "not routable" : `${providers[s.provider].name} ${providers[s.provider].asn}`,
+    first: fmt(s.start),
+    last: fmt(s.end),
+    n: s.n,
+  })),
+);
+const total = data.wallets.reduce((a, w) => a + w.stats.n, 0);
+---
+
+<Figure
+  title="Four months of pings, three wallets, thirteen markers"
+  lede="Each bar is an unbroken run of pings to one server address. Hover a bar to see the address; bars for the same server light up together across wallets."
+>
+  <div class="rt" data-rt>
+    <div class="hr-legend">
+      <span class="hr-legend__item"><span class="hr-swatch" style="background:var(--hr-blue)"></span>Evoxt, AS149440</span>
+      <span class="hr-legend__item"><span class="hr-swatch" style="background:var(--hr-orange)"></span>Virtuo, AS399486</span>
+      <span class="hr-legend__item"><span class="hr-swatch" style="background:var(--hr-gray)"></span>not routable, test</span>
+      <span class="hr-legend__item">
+        <svg width="11" height="11" viewBox="-5.5 -5.5 11 11" aria-hidden="true"><path d="M0-4.5L4.5 0L0 4.5L-4.5 0Z" fill="#1a1a1a"></path></svg>
+        top-up from the treasury
+      </span>
+      <span class="hr-legend__item">
+        <svg width="11" height="11" viewBox="-5.5 -5.5 11 11" aria-hidden="true"><path d="M0-4L4 0L0 4L-4 0Z" fill="#fff" stroke="#1a1a1a" stroke-width="1.3"></path></svg>
+        top-up from elsewhere
+      </span>
+    </div>
+    <div class="rt__wrap">
+      <div class="hr-scroll">
+        <svg
+          class="rt__svg"
+          viewBox={`0 0 ${W} ${H}`}
+          role="img"
+          aria-label={`Timeline from June to November 2026: public reports, malicious packages, the HuntRole front and ${total} pings from three wallets. The table below holds the same data.`}
+        >
+          {
+            months.map((m) => (
+              <g>
+                <line class="rt__grid" x1={r1(x(m.ts))} x2={r1(x(m.ts))} y1="22" y2={H - 14} />
+                <text class="rt__axis" x={r1(x(m.ts)) + 4} y="14">{m.label}</text>
+              </g>
+            ))
+          }
+          <text class="rt__axis" x={GUT - 8} y="14" text-anchor="end">2026, UTC</text>
+
+          <rect class="rt__band" x={bandX1} y="192" width={r1(bandX2 - bandX1)} height="100" rx="2"></rect>
+          <text class="rt__note" x={bandX2} y="187" text-anchor="end">13-16 Oct, linked rotation</text>
+
+          <line class="rt__email" x1={emailX} x2={emailX} y1="96" y2={H - 14}></line>
+          <text class="rt__note" x={emailX - 5} y={H - 3} text-anchor="end">10 Nov, the email arrives</text>
+
+          <line class="rt__sep" x1="0" x2={W} y1="128" y2="128"></line>
+
+          {
+            eventLanes.map((lane) => (
+              <g>
+                <text class="rt__lane" x="0" y={lane.y + 3.5}>{lane.name}</text>
+                <line class="rt__rail" x1={GUT} x2={W - PADR} y1={lane.y} y2={lane.y} />
+                {lane.events.map((e) => {
+                  const ex = r1(x(day(e.d)));
+                  return (
+                    <g class="rt__ev" data-tip={`${e.tip}|${fmtDay(day(e.d))}`}>
+                      <circle class="rt__hit" cx={ex} cy={lane.y} r="11" />
+                      <circle class="rt__dot" cx={ex} cy={lane.y} r="4.5" />
+                      {e.label && (
+                        <text
+                          class="rt__evlabel"
+                          x={e.side === "left" ? ex - 9 : ex + 9}
+                          y={lane.y - 8}
+                          text-anchor={e.side === "left" ? "end" : "start"}
+                        >
+                          {e.label}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+              </g>
+            ))
+          }
+
+          {
+            lanes.map((lane) => (
+              <g>
+                <text class="rt__lane" x="0" y={lane.y + 7}>{walletLabel[lane.id]}</text>
+                <text class="rt__addr" x="0" y={lane.y + 20}>{short(lane.address)}</text>
+                <line class="rt__rail" x1={GUT} x2={W - PADR} y1={lane.y + BAR / 2} y2={lane.y + BAR / 2} />
+                {lane.bars.map((b) => (
+                  <g class="rt__run" data-ip={b.ip} data-tip={b.tip} style={`--d:${b.delay}s`}>
+                    <rect class="rt__bar" x={b.x1} y={lane.y} width={b.width} height={BAR} rx="2" fill={fill[b.provider]} />
+                    {b.label && <text class="rt__barlabel" x={b.cx} y={lane.y - 5} text-anchor="middle">{b.label}</text>}
+                    <rect class="rt__hit" x={r1(b.x1 - Math.max(0, (12 - b.width) / 2))} y={lane.y - 8} width={Math.max(12, b.width)} height={BAR + 16} />
+                  </g>
+                ))}
+                {lane.tops.map((t) => (
+                  <g class="rt__top" data-tip={t.tip}>
+                    <circle class="rt__hit" cx={t.x} cy={lane.y + BAR + 10} r="9" />
+                    <path
+                      d={`M${t.x} ${lane.y + BAR + 5.5}L${t.x + 4.5} ${lane.y + BAR + 10}L${t.x} ${lane.y + BAR + 14.5}L${t.x - 4.5} ${lane.y + BAR + 10}Z`}
+                      fill={t.treasury ? "#1a1a1a" : "#fff"}
+                      stroke="#1a1a1a"
+                      stroke-width="1.3"
+                    />
+                  </g>
+                ))}
+              </g>
+            ))
+          }
+        </svg>
+      </div>
+      <div class="hr-tip" role="status"></div>
+    </div>
+
+    <details class="hr-table">
+      <summary>Show the runs as a table</summary>
+      <div class="hr-table__wrap">
+        <table>
+          <thead>
+            <tr><th>Wallet</th><th>Address in the marker</th><th>Network</th><th>First ping, UTC</th><th>Last ping, UTC</th><th>Pings</th></tr>
+          </thead>
+          <tbody>
+            {
+              rows.map((r) => (
+                <tr>
+                  <td>{r.wallet}</td>
+                  <td class="hr-mono">{r.ip}</td>
+                  <td>{r.provider}</td>
+                  <td>{r.first}</td>
+                  <td>{r.last}</td>
+                  <td>{r.n}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+  <Fragment slot="caption">
+    {total.toLocaleString("en-US")} zero-value transactions read from the public Ethereum history on {data.asOfIso.slice(0, 10)}.
+    A run breaks when a wallet stays silent for more than 18 hours. Package dates are the days the advisories were
+    opened, not the upload dates.
+  </Fragment>
+</Figure>
+
+<style>
+  .rt__wrap {
+    position: relative;
+    margin-top: 0.9rem;
+  }
+
+  .rt__svg {
+    display: block;
+    width: 100%;
+    min-width: 780px;
+    height: auto;
+    overflow: visible;
+  }
+
+  .rt__grid {
+    stroke: #efefed;
+    stroke-width: 1;
+  }
+
+  .rt__sep {
+    stroke: var(--hr-line);
+    stroke-width: 1;
+  }
+
+  .rt__rail {
+    stroke: #efefed;
+    stroke-width: 1;
+  }
+
+  .rt__axis {
+    font-size: 11.5px;
+    fill: var(--hr-muted);
+  }
+
+  .rt__lane {
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: var(--hr-ink);
+  }
+
+  .rt__addr {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    fill: var(--hr-muted);
+  }
+
+  .rt__band {
+    fill: var(--hr-wash);
+  }
+
+  .rt__email {
+    stroke: var(--hr-ink);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+
+  .rt__note {
+    font-size: 11.5px;
+    fill: var(--hr-ink-2);
+  }
+
+  .rt__dot {
+    fill: var(--hr-ink-2);
+    stroke: #fff;
+    stroke-width: 2;
+  }
+
+  .rt__hit {
+    fill: transparent;
+    stroke: none;
+  }
+
+  .rt__evlabel,
+  .rt__barlabel {
+    font-size: 11.5px;
+    fill: var(--hr-ink-2);
+    paint-order: stroke;
+    stroke: #fff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
+  .rt__barlabel {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+  }
+
+  .rt__bar {
+    stroke: #fff;
+    stroke-width: 1;
+    transform-box: fill-box;
+    transform-origin: left center;
+  }
+
+  .rt__run,
+  .rt__ev,
+  .rt__top {
+    cursor: default;
+    transition: opacity 0.15s ease;
+  }
+
+  .rt.is-dim .rt__run:not(.is-hot) {
+    opacity: 0.22;
+  }
+
+  .rt.is-armed .rt__bar {
+    transform: scaleX(0);
+  }
+
+  .rt.is-armed .rt__barlabel,
+  .rt.is-armed .rt__top {
+    opacity: 0;
+  }
+
+  .rt.is-in .rt__bar {
+    transform: scaleX(1);
+    transition: transform 0.5s cubic-bezier(0.3, 0.7, 0.2, 1) var(--d);
+  }
+
+  .rt.is-in .rt__barlabel {
+    opacity: 1;
+    transition: opacity 0.3s ease calc(var(--d) + 0.3s);
+  }
+
+  .rt.is-in .rt__top {
+    opacity: 1;
+    transition: opacity 0.4s ease 1.5s;
+  }
+</style>
+
+<script>
+  import { attachTips } from "./tip";
+
+  function initRotationTimeline() {
+    document.querySelectorAll<HTMLElement>("[data-rt]").forEach((root) => {
+      if (root.dataset.ready) return;
+      root.dataset.ready = "1";
+      const wrap = root.querySelector<HTMLElement>(".rt__wrap")!;
+      const runs = Array.from(root.querySelectorAll<SVGGElement>(".rt__run"));
+
+      attachTips(wrap, (el) => {
+        const ip = el?.getAttribute("data-ip");
+        root.classList.toggle("is-dim", Boolean(ip));
+        runs.forEach((r) => r.classList.toggle("is-hot", Boolean(ip) && r.dataset.ip === ip));
+      });
+
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce || !("IntersectionObserver" in window)) return;
+      root.classList.add("is-armed");
+      const io = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((e) => e.isIntersecting)) return;
+          io.disconnect();
+          root.classList.add("is-in");
+          window.setTimeout(() => root.classList.remove("is-armed", "is-in"), 2600);
+        },
+        { threshold: 0.35 },
+      );
+      io.observe(wrap);
+    });
+  }
+
+  initRotationTimeline();
+  document.addEventListener("astro:page-load", initRotationTimeline);
+</script>
