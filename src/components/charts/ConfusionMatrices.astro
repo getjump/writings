@@ -5,7 +5,7 @@
   <div class="cm-grid">
     <div class="cm-panel" data-matrix="report">
       <h3 class="cm-title">Per-Report (F1=0.780)</h3>
-      <svg viewBox="0 0 340 310" class="cm-svg" aria-label="Confusion matrix for per-report classification">
+      <svg viewBox="0 56 340 262" class="cm-svg" aria-label="Confusion matrix for per-report classification">
         <!-- Axis label: Actual (rotated) -->
         <text x="14" y="201" text-anchor="middle" class="cm-axis-label" transform="rotate(-90 14 201)">Actual</text>
         <!-- Axis label: Predicted -->
@@ -24,7 +24,7 @@
     </div>
     <div class="cm-panel" data-matrix="game">
       <h3 class="cm-title">Per-Game Vote (F1=0.871)</h3>
-      <svg viewBox="0 0 340 310" class="cm-svg" aria-label="Confusion matrix for per-game vote classification">
+      <svg viewBox="0 56 340 262" class="cm-svg" aria-label="Confusion matrix for per-game vote classification">
         <text x="14" y="201" text-anchor="middle" class="cm-axis-label" transform="rotate(-90 14 201)">Actual</text>
         <text x="196" y="72" text-anchor="middle" class="cm-axis-label">Predicted</text>
         <text x="78" y="128" text-anchor="end" class="cm-row-label">borked</text>
@@ -99,12 +99,12 @@
     fill: var(--color-text-secondary);
   }
 
-  .cm-cell-rect {
+  .cm-wrap :global(.cm-cell-rect) {
     transition: opacity 0.2s ease, stroke-width 0.15s ease;
     cursor: pointer;
   }
 
-  .cm-cell-count {
+  .cm-wrap :global(.cm-cell-count) {
     font-family: var(--font-mono);
     font-size: 13px;
     font-weight: 700;
@@ -113,21 +113,17 @@
     text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   }
 
-  .cm-cell-pct {
+  .cm-wrap :global(.cm-cell-pct) {
     font-family: var(--font-mono);
     font-size: 10px;
     fill: rgba(255,255,255,0.85);
     pointer-events: none;
   }
 
-  .cm-cell-count.dark-text,
-  .cm-cell-pct.dark-text {
-    fill: var(--color-text);
+  .cm-wrap :global(.cm-cell-count.dark-text),
+  .cm-wrap :global(.cm-cell-pct.dark-text) {
+    fill: #1a1a1a;
     text-shadow: none;
-  }
-
-  .cm-cell-pct.dark-text {
-    fill: var(--color-text-secondary);
   }
 
   .cm-highlight-bar {
@@ -154,29 +150,38 @@
   }
 
   /* Fade-in animation for cells */
-  .cm-cell-group {
+  .cm-wrap :global(.cm-cell-group) {
     opacity: 0;
     transform: scale(0.85);
+    transform-box: fill-box;
+    transform-origin: center;
     transition: opacity 0.35s ease, transform 0.35s ease;
   }
 
-  .cm-cell-group.cm-visible {
+  .cm-wrap :global(.cm-cell-group.cm-visible) {
     opacity: 1;
     transform: scale(1);
   }
 
-  .cm-dimmed .cm-cell-group {
+  .cm-wrap :global(.cm-dimmed .cm-cell-group) {
     opacity: 0.4;
     transition: opacity 0.15s ease;
   }
 
-  .cm-dimmed .cm-cell-group.cm-active {
+  .cm-wrap :global(.cm-dimmed .cm-cell-group.cm-active) {
     opacity: 1;
   }
 
-  .cm-dimmed .cm-cell-group.cm-row-highlight,
-  .cm-dimmed .cm-cell-group.cm-col-highlight {
+  .cm-wrap :global(.cm-dimmed .cm-cell-group.cm-row-highlight),
+  .cm-wrap :global(.cm-dimmed .cm-cell-group.cm-col-highlight) {
     opacity: 0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cm-wrap :global(.cm-cell-group) {
+      transform: none;
+      transition: none;
+    }
   }
 </style>
 
@@ -242,7 +247,11 @@
     }
 
     function needsDarkText(pct: number): boolean {
-      return pct < 30;
+      const [r, g, b] = pctToColor(pct).match(/\d+/g)!.map((c) => {
+        const v = Number(c) / 255;
+        return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179;
     }
 
     function formatCount(n: number): string {

@@ -21,12 +21,7 @@
   line-gap-override: 0%;
 }
 
-:root,
-.hr-fig,
-.cm-wrap,
-.cumulative-progress-wrapper,
-.error-breakdown-wrapper,
-.irt-distributions-wrapper {
+:root {
   --color-text: #1a1a1a;
   --color-text-secondary: #555;
   --color-text-tertiary: #6e6e6c;
@@ -41,6 +36,12 @@
   --color-accent-on-dark: #6f8bff;
   --color-positive: #15803d;
   --color-negative: #c22020;
+  --chart-blue: #4a7fb5;
+  --chart-orange: #e8a838;
+  --chart-red: #e57373;
+  --chart-green: #4a9e6b;
+  --chart-gray: #a8a8a6;
+  --chart-zero: #999999;
 }
 
 :root {
@@ -75,36 +76,20 @@
     --color-accent-soft: #2a3566;
     --color-positive: #4ade80;
     --color-negative: #f87171;
+    --chart-blue: #6f9fd4;
+    --chart-green: #5fb581;
+    --chart-gray: #6b6b67;
+    --chart-zero: #7a7a76;
   }
 
-  .hr-fig,
-  .cm-wrap,
-  .cumulative-progress-wrapper,
-  .error-breakdown-wrapper,
-  .irt-distributions-wrapper {
-    color-scheme: light;
-    color: var(--color-text);
-    background: var(--color-bg);
-    border-radius: 10px;
-    padding: 0.75rem;
-  }
-
-  .hr-fig {
-    background: var(--color-surface);
-  }
-
-  .hr-fig__frame {
-    border-color: transparent !important;
-  }
-
-  .astro-code:not(.hr-fig .astro-code),
-  .astro-code:not(.hr-fig .astro-code) span {
+  .astro-code,
+  .astro-code span {
     color: var(--shiki-dark) !important;
     font-style: var(--shiki-dark-font-style) !important;
     font-weight: var(--shiki-dark-font-weight) !important;
   }
 
-  .astro-code:not(.hr-fig .astro-code) {
+  .astro-code {
     background-color: var(--color-code-bg) !important;
   }
 }

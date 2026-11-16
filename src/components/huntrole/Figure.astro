@@ -49,9 +49,39 @@ const { title, lede, id, flush = false } = Astro.props;
     --hr-gray: #a8a8a6;
     --hr-red: #d03b3b;
     --hr-red-wash: #fbecec;
+    --hr-red-ink: #8a2424;
+    --hr-on-ink: #ffffff;
+    --hr-grid: #efefed;
+    --hr-stroke: #9a9a96;
+    --hr-tip-dim: #b9b9b5;
     margin: 2.25em 0;
     font-family: var(--font-heading);
     color: var(--hr-ink);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .hr-fig {
+      --hr-surface: #1e1e1d;
+      --hr-ink: #e9e7e3;
+      --hr-ink-2: #b5b3ae;
+      --hr-muted: #9a9893;
+      --hr-line: #343432;
+      --hr-line-strong: #4d4d4a;
+      --hr-wash: #282827;
+      --hr-blue: #5b9cf0;
+      --hr-blue-wash: #1b2a3e;
+      --hr-orange: #f08050;
+      --hr-orange-wash: #3b241a;
+      --hr-aqua: #2fc28c;
+      --hr-gray: #7a7a76;
+      --hr-red: #ef5b5b;
+      --hr-red-wash: #3c1e1e;
+      --hr-red-ink: #f3a3a3;
+      --hr-on-ink: #161615;
+      --hr-grid: #2a2a29;
+      --hr-stroke: #6f6f6b;
+      --hr-tip-dim: #5a5a57;
+    }
   }
 
   .hr-fig__frame {
@@ -132,7 +162,7 @@ const { title, lede, id, flush = false } = Astro.props;
   .hr-fig .hr-btn[aria-selected="true"] {
     background: var(--hr-ink);
     border-color: var(--hr-ink);
-    color: #fff;
+    color: var(--hr-on-ink);
   }
 
   .hr-fig .hr-btn:disabled {
@@ -210,7 +240,7 @@ const { title, lede, id, flush = false } = Astro.props;
     z-index: 5;
     pointer-events: none;
     background: var(--hr-ink);
-    color: #fff;
+    color: var(--hr-on-ink);
     border-radius: 6px;
     padding: 0.5em 0.7em;
     font-size: 0.72rem;
@@ -233,7 +263,7 @@ const { title, lede, id, flush = false } = Astro.props;
   }
 
   .hr-fig .hr-tip .hr-tip__dim {
-    color: #b9b9b5;
+    color: var(--hr-tip-dim);
   }
 
   .hr-fig .hr-legend {

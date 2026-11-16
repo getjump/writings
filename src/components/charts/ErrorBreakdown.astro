@@ -30,7 +30,7 @@ function isBorked(from: string, to: string) {
 }
 
 function barColor(from: string, to: string) {
-  return isBorked(from, to) ? "#e57373" : "#e8a838";
+  return isBorked(from, to) ? "var(--chart-red)" : "var(--chart-orange)";
 }
 
 function formatLabel(s: string) {
@@ -88,7 +88,7 @@ function formatLabel(s: string) {
             y={y}
             width={0}
             height={barH}
-            fill={fill}
+            style={`fill: ${fill}`}
             rx="3"
             data-target-w={fullBarW}
             data-index={i}

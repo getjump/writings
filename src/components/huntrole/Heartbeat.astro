@@ -222,7 +222,7 @@ const dials = [
   }
 
   .hb__grid {
-    stroke: #efefed;
+    stroke: var(--hr-grid);
     stroke-width: 1;
   }
 
@@ -269,7 +269,7 @@ const dials = [
     font-size: 11px;
     fill: var(--hr-ink-2);
     paint-order: stroke;
-    stroke: #fff;
+    stroke: var(--hr-surface);
     stroke-width: 3px;
   }
 
@@ -318,7 +318,7 @@ const dials = [
   }
 
   .hb__wedge {
-    fill: #3d3d3b;
+    fill: color-mix(in srgb, var(--hr-ink) 85%, var(--hr-surface));
   }
 
   .hb__wedgehit {

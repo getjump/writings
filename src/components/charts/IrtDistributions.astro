@@ -387,7 +387,7 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
   }
 
   .zero-line {
-    stroke: #999;
+    stroke: var(--chart-zero);
     stroke-width: 1;
     stroke-dasharray: 4 3;
   }
@@ -395,7 +395,7 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
   .zero-label {
     font-family: var(--font-mono, monospace);
     font-size: 9px;
-    fill: #999;
+    fill: var(--chart-zero);
   }
 
   .mean-line {
@@ -404,11 +404,11 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
   }
 
   .theta-mean-line {
-    stroke: #4a7fb5;
+    stroke: var(--chart-blue);
   }
 
   .diff-mean-line {
-    stroke: #e8a838;
+    stroke: var(--chart-orange);
   }
 
   .mean-label {
@@ -418,11 +418,11 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
   }
 
   .theta-mean-label {
-    fill: #4a7fb5;
+    fill: var(--chart-blue);
   }
 
   .diff-mean-label {
-    fill: #e8a838;
+    fill: var(--chart-orange);
   }
 
   .hist-bar {
@@ -431,11 +431,11 @@ const diffXTicks = xTicksFor(diffBins[0].min, diffBins[diffBins.length - 1].max)
   }
 
   .theta-bar {
-    fill: #4a7fb5;
+    fill: var(--chart-blue);
   }
 
   .diff-bar {
-    fill: #e8a838;
+    fill: var(--chart-orange);
   }
 
   .hist-bar:hover {

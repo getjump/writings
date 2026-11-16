@@ -17,7 +17,7 @@ const svgH = 360;
 const marginTop = 40;
 const marginBottom = 60;
 const marginLeft = 55;
-const marginRight = 20;
+const marginRight = 54;
 const plotW = svgW - marginLeft - marginRight;
 const plotH = svgH - marginTop - marginBottom;
 
@@ -74,10 +74,10 @@ const yBottom = yScale(yMin);
       class="baseline-line"
     />
     <text
-      x={marginLeft + plotW + 2}
-      y={baselineY - 5}
+      x={marginLeft + plotW + 4}
+      y={baselineY - 15}
       class="baseline-label"
-    >Original baseline</text>
+    ><tspan>Original</tspan><tspan x={marginLeft + plotW + 4} dy="11">baseline</tspan></text>
 
     <!-- Bars -->
     {phases.map((p, i) => {
@@ -85,7 +85,7 @@ const yBottom = yScale(yMin);
       const barH = ((p.f1 - yMin) / (yMax - yMin)) * plotH;
       const barY = yScale(p.f1);
       const isLast = i === phases.length - 1;
-      const fill = isLast ? "#4a9e6b" : "#a8a8a6";
+      const fill = isLast ? "var(--chart-green)" : "var(--chart-gray)";
       const lines = p.label.split("\n");
 
       const delta = i === 0 ? 0 : +(p.f1 - phases[i - 1].f1).toFixed(3);
@@ -99,7 +99,7 @@ const yBottom = yScale(yMin);
             y={yBottom}
             width={barW}
             height={0}
-            fill={fill}
+            style={`fill: ${fill}`}
             rx="3"
             data-target-y={barY}
             data-target-h={barH}
@@ -190,7 +190,7 @@ const yBottom = yScale(yMin);
   }
 
   .baseline-line {
-    stroke: #e57373;
+    stroke: var(--chart-red);
     stroke-width: 1.5;
     stroke-dasharray: 6 4;
   }
@@ -198,7 +198,7 @@ const yBottom = yScale(yMin);
   .baseline-label {
     font-family: var(--font-heading, sans-serif);
     font-size: 10px;
-    fill: #e57373;
+    fill: var(--chart-red);
   }
 
   .bar-rect {

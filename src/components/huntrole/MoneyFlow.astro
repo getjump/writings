@@ -116,7 +116,7 @@ const drawn = edges.map((e) => {
         <svg class="mf__svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Node-link diagram of ETH transfers between funding sources, the treasury, three pointer wallets and exits. The table below holds the same data.">
           <defs>
             <marker id="mf-arrow" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-              <path d="M0 0L8 4L0 8Z" fill="#555555"></path>
+              <path d="M0 0L8 4L0 8Z" style="fill: var(--hr-ink-2)"></path>
             </marker>
           </defs>
           <text class="mf__band" x="0" y="12">The money</text>
@@ -180,7 +180,7 @@ const drawn = edges.map((e) => {
   <Fragment slot="caption">
     Ethereum only, amounts in ETH, line width follows the square root of the amount. The dashed line is the one
     transfer that went back. Token transfers and swap proceeds are not drawn, so more ETH leaves the treasury than
-    enters it here. The two boxes with a dark outline are the same exchange.
+    enters it here. The two boxes with a bold outline are the same exchange.
   </Fragment>
 </Figure>
 
@@ -231,7 +231,7 @@ const drawn = edges.map((e) => {
 
   .mf__line {
     fill: none;
-    stroke: #9a9a96;
+    stroke: var(--hr-stroke);
     stroke-opacity: 0.75;
     stroke-linecap: butt;
     transition:
@@ -241,7 +241,7 @@ const drawn = edges.map((e) => {
 
   .mf__line--back {
     stroke-dasharray: 4 3;
-    stroke: #555555;
+    stroke: var(--hr-ink-2);
   }
 
   .mf__hit {
@@ -255,7 +255,7 @@ const drawn = edges.map((e) => {
     font-variant-numeric: tabular-nums;
     fill: var(--hr-ink-2);
     paint-order: stroke;
-    stroke: #fff;
+    stroke: var(--hr-surface);
     stroke-width: 3px;
     stroke-linejoin: round;
     pointer-events: none;
