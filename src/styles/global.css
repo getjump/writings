@@ -86,6 +86,14 @@
   [data-theme="dark"] .astro-code {
     background-color: var(--color-code-bg) !important;
   }
+
+  [data-theme="dark"] .d2-diagram :is(.fill-N1, .fill-B1) { fill: var(--color-text); }
+  [data-theme="dark"] .d2-diagram .fill-N2 { fill: var(--color-text-secondary); }
+  [data-theme="dark"] .d2-diagram .fill-N4 { fill: #3a3936; }
+  [data-theme="dark"] .d2-diagram .fill-N7 { fill: var(--color-bg); }
+  [data-theme="dark"] .d2-diagram .fill-B6 { fill: #2a2520; }
+  [data-theme="dark"] .d2-diagram .stroke-B1 { stroke: #d8ccbb; }
+  [data-theme="dark"] .d2-diagram .stroke-B2 { stroke: #a8987f; }
 }
 
 *,
